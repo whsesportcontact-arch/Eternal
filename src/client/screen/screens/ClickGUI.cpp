@@ -266,7 +266,7 @@ void ClickGUI::onRender(Event&) {
         // Latite Text
         float realLogoHeight = rect.getHeight() * 0.077921f;
         float titleSize = 25.f * adaptedScale;
-        std::wstring titleText = L"\x202AEternal Client\x202C";
+        std::wstring titleText = L"\x202A" L"Eternal Client\x202C";
         float titleGap = 9.f * adaptedScale;
         float titleWidth = 500.f * adaptedScale;
         RectF titleRect = rtl ? RectF { logoRect.left - titleGap - titleWidth, logoRect.top, logoRect.left - titleGap,
