@@ -23,6 +23,7 @@ private:
 
     Kind classify(SDK::BlockLegacy* legacy);
     bool canSeeThroughWalls();
+    void updateWallsMode();
 
     ValueType range = FloatValue(16.f);
     ValueType thickness = FloatValue(2.f);
@@ -52,6 +53,9 @@ private:
     std::unordered_map<SDK::BlockLegacy*, Kind> kindCache;
     int tickCounter = 0;
     std::atomic_bool failed = false;
+    std::atomic_bool wallsAllowed = false;
+    bool reportedWalls = false;
+    std::string reportedHost;
 
     friend struct ChestOutlinesScan;
 };

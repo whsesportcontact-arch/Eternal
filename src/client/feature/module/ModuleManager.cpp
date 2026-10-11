@@ -65,6 +65,7 @@
 #include "modules/eternal/HealthDisplay.h"
 #include "modules/eternal/ChestOutlines.h"
 #include "modules/eternal/ShulkerPreview.h"
+#include "modules/eternal/Freecam.h"
 
 #include "client/event/events/KeyUpdateEvent.h"
 
@@ -132,6 +133,7 @@ ModuleManager::ModuleManager() {
     this->items.push_back(std::make_shared<HealthDisplay>());
     this->items.push_back(std::make_shared<ChestOutlines>());
     this->items.push_back(std::make_shared<ShulkerPreview>());
+    this->items.push_back(std::make_shared<Freecam>());
 
     for (auto& mod : items) {
         mod->onInit();

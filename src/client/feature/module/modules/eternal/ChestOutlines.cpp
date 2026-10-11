@@ -65,11 +65,36 @@ ChestOutlines::Kind ChestOutlines::classify(SDK::BlockLegacy* legacy) {
 }
 
 bool ChestOutlines::canSeeThroughWalls() {
-    if (!std::get<BoolValue>(throughWalls)) return false;
-    // Connected to a server or Realm -> never draw through walls.
+    return std::get<BoolValue>(throughWalls) && wallsAllowed.load();
+}
+
+// Runs on the game thread. Decides whether this is your own singleplayer world, and tells you in chat.
+void ChestOutlines::updateWallsMode() {
+    std::string host;
     auto* info = SDK::RemoteConnectorComposite::getConnectionInfo();
-    if (info && !info->hostIpAddress.empty()) return false;
-    return true;
+    if (info) host = info->hostIpAddress;
+
+    // singleplayer / your own hosted world reports no host, or a loopback address
+    const bool local = host.empty() || host == "127.0.0.1" || host == "localhost" || host == "::1" ||
+                       host == "0.0.0.0";
+    wallsAllowed = local;
+
+    const bool wanted = std::get<BoolValue>(throughWalls);
+    if (!wanted) {
+        reportedWalls = false;
+        return;
+    }
+    if (reportedWalls && host == reportedHost) return;
+    reportedWalls = true;
+    reportedHost = host;
+
+    if (local)
+        Latite::getClientMessageQueue().push(std::string(
+            "\xC2\xA7" "d[Eternal]\xC2\xA7" "r Chest Outlines: See Through Walls is \xC2\xA7" "aON\xC2\xA7" "r (singleplayer world)."));
+    else
+        Latite::getClientMessageQueue().push(std::string(
+            "\xC2\xA7" "d[Eternal]\xC2\xA7" "r Chest Outlines: See Through Walls is \xC2\xA7" "cOFF\xC2\xA7" "r here, you're on a server/Realm (") +
+            host + ").");
 }
 
 namespace {
@@ -115,6 +140,7 @@ void ChestOutlines::onTick(Event&) {
     if (failed) return;
     // rescan twice a second; storage doesn't move
     if (++tickCounter % 10 != 0) return;
+    updateWallsMode();
 
     auto ci = SDK::ClientInstance::get();
     auto lp = ci ? ci->getLocalPlayer() : nullptr;
@@ -162,6 +188,7 @@ void ChestOutlines::onTick(Event&) {
 void ChestOutlines::onEnable() {
     failed = false; // toggling the module retries after an error
     tickCounter = 9; // scan on the very next tick
+    reportedWalls = false;
 }
 
 struct ChestOutlinesDraw {
