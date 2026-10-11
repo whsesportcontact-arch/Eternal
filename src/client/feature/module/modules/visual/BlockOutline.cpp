@@ -19,6 +19,8 @@ BlockOutline::BlockOutline()
                LocalizeString::get("client.module.blockOutline.outline.desc"), this->outline, "vanillaOutline"_isfalse);
     addSetting("outlineColor", LocalizeString::get("client.module.blockOutline.outlineColor.name"),
                LocalizeString::get("client.module.blockOutline.outlineColor.desc"), this->outlineColor, "outline");
+    addSliderSetting("thickness", L"Thickness", L"How thick the outline is. Higher = easier to see.", this->thickness,
+                     FloatValue(1.f), FloatValue(6.f), FloatValue(1.f), "outline");
 
     addSetting("overlay", LocalizeString::get("client.module.blockOutline.overlay.name"),
                LocalizeString::get("client.module.blockOutline.overlay.desc"), this->overlay);
@@ -45,15 +47,20 @@ void BlockOutline::onOutlineSelection(Event& evG) {
                           : (std::get<BoolValue>(transparent) ? SDK::MaterialPtr::getSelectionOverlayMaterial()
                                                               : SDK::MaterialPtr::getSelectionBoxMaterial()) };
 
-    if (std::get<BoolValue>(outline)) {
-        dc.drawBox(ev.getBoundingBox(), std::get<ColorValue>(outlineColor).getMainColor());
-    }
-
     auto outlineCol = std::get<ColorValue>(outlineColor).getMainColor();
     auto overlayCol = std::get<ColorValue>(overlayColor).getMainColor();
 
     if (std::get<BoolValue>(outline)) {
-        dc.drawBox(ev.getBoundingBox(), outlineCol);
+        // Lines are 1px, so draw several slightly larger boxes around each other for a thick outline.
+        int layers = static_cast<int>(std::get<FloatValue>(thickness));
+        if (layers < 1) layers = 1;
+        AABB box = ev.getBoundingBox();
+        for (int i = 0; i < layers; i++) {
+            float e = 0.0025f + 0.004f * static_cast<float>(i);
+            dc.drawBox(AABB { Vec3 { box.lower.x - e, box.lower.y - e, box.lower.z - e },
+                              Vec3 { box.higher.x + e, box.higher.y + e, box.higher.z + e } },
+                       outlineCol);
+        }
         dc.flush();
     }
 
