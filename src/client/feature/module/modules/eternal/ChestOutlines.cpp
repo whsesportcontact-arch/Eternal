@@ -7,6 +7,8 @@
 #include "mc/common/network/RemoteConnectorComposite.h"
 #include "mc/common/client/renderer/MaterialPtr.h"
 #include <util/DrawUtil3D.h>
+#include "client/Latite.h"
+#include "client/misc/ClientMessageQueue.h"
 
 ChestOutlines::ChestOutlines()
     : Module("ChestOutlines", L"Chest Outlines",
@@ -70,7 +72,47 @@ bool ChestOutlines::canSeeThroughWalls() {
     return true;
 }
 
+namespace {
+    // Runs fn(ctx) and catches crashes (access violations) instead of letting them close the game.
+    bool guardedCall(void (*fn)(void*), void* ctx) {
+        __try {
+            fn(ctx);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
+    }
+}
+
+struct ChestOutlinesScan {
+    ChestOutlines* self;
+    SDK::BlockSource* region;
+    int px, py, pz, r, yr;
+    bool want[7];
+    std::vector<std::pair<BlockPos, int>>* out;
+};
+
+void ChestOutlines::scanImpl(void* ctxPtr) {
+    auto& c = *static_cast<ChestOutlinesScan*>(ctxPtr);
+    // stay inside the world's build limits
+    int yMin = (std::max)(c.py - c.yr, -64), yMax = (std::min)(c.py + c.yr, 319);
+    for (int x = c.px - c.r; x <= c.px + c.r; x++) {
+        for (int z = c.pz - c.r; z <= c.pz + c.r; z++) {
+            for (int y = yMin; y <= yMax; y++) {
+                BlockPos bp { x, y, z };
+                auto block = c.region->getBlock(bp); // same lookup WAILA uses
+                if (!block) continue;
+                auto legacy = block->legacyBlock;
+                if (!legacy) continue;
+                Kind k = c.self->classify(legacy);
+                if (k != None && c.want[k]) c.out->push_back({ bp, static_cast<int>(k) });
+            }
+        }
+    }
+}
+
 void ChestOutlines::onTick(Event&) {
+    if (failed) return;
     // rescan twice a second; storage doesn't move
     if (++tickCounter % 10 != 0) return;
 
@@ -83,44 +125,79 @@ void ChestOutlines::onTick(Event&) {
         return;
     }
 
-    const bool wantKind[] = { false,
-                              std::get<BoolValue>(showChests),
-                              std::get<BoolValue>(showBarrels),
-                              std::get<BoolValue>(showShulkers),
-                              std::get<BoolValue>(showEnderChests),
-                              std::get<BoolValue>(showHoppers),
-                              std::get<BoolValue>(showFurnaces) };
-
     Vec3 p = lp->getPos();
-    int px = static_cast<int>(std::floor(p.x)), py = static_cast<int>(std::floor(p.y)),
-        pz = static_cast<int>(std::floor(p.z));
-    int r = static_cast<int>(std::get<FloatValue>(range));
-    int yr = (std::min)(r, 24);
+    std::vector<std::pair<BlockPos, int>> raw;
+    raw.reserve(256);
+    ChestOutlinesScan ctx { this,
+                            region,
+                            static_cast<int>(std::floor(p.x)),
+                            static_cast<int>(std::floor(p.y)),
+                            static_cast<int>(std::floor(p.z)),
+                            static_cast<int>(std::get<FloatValue>(range)),
+                            (std::min)(static_cast<int>(std::get<FloatValue>(range)), 24),
+                            { false, std::get<BoolValue>(showChests), std::get<BoolValue>(showBarrels),
+                              std::get<BoolValue>(showShulkers), std::get<BoolValue>(showEnderChests),
+                              std::get<BoolValue>(showHoppers), std::get<BoolValue>(showFurnaces) },
+                            &raw };
 
-    std::vector<Found> next;
-    for (int x = px - r; x <= px + r; x++) {
-        for (int z = pz - r; z <= pz + r; z++) {
-            for (int y = py - yr; y <= py + yr; y++) {
-                auto block = region->getBlock(x, y, z);
-                if (!block) continue;
-                Kind k = classify(block->legacyBlock);
-                if (k != None && wantKind[k]) next.push_back({ BlockPos { x, y, z }, k });
-            }
+    if (!guardedCall(&ChestOutlines::scanImpl, &ctx)) {
+        failed = true;
+        {
+            std::scoped_lock lk(foundLock);
+            found.clear();
         }
+        Latite::getClientMessageQueue().push(
+            std::string("\xC2\xA7" "d[Eternal]\xC2\xA7" "r Chest Outlines hit an error on this game version and paused "
+                        "itself. Toggle it off and on to retry."));
+        return;
     }
 
+    std::vector<Found> next;
+    next.reserve(raw.size());
+    for (auto& [pos, k] : raw) next.push_back({ pos, static_cast<Kind>(k) });
     std::scoped_lock lk(foundLock);
     found = std::move(next);
 }
 
+void ChestOutlines::onEnable() {
+    failed = false; // toggling the module retries after an error
+    tickCounter = 9; // scan on the very next tick
+}
+
+struct ChestOutlinesDraw {
+    MCDrawUtil3D* dc;
+    std::vector<std::pair<AABB, d2d::Color>>* boxes;
+    int layers;
+    bool fill;
+};
+
+void ChestOutlines::drawImpl(void* ctxPtr) {
+    auto& c = *static_cast<ChestOutlinesDraw*>(ctxPtr);
+    for (auto& [box, col] : *c.boxes) {
+        Vec3 lo = box.lower, hi = box.higher;
+        for (int i = 0; i < c.layers; i++) {
+            float e = 0.003f + 0.004f * static_cast<float>(i);
+            c.dc->drawBox(AABB { Vec3 { lo.x - e, lo.y - e, lo.z - e }, Vec3 { hi.x + e, hi.y + e, hi.z + e } }, col);
+        }
+        if (c.fill) {
+            d2d::Color fc = col.asAlpha(0.18f);
+            float e = 0.002f;
+            Vec3 a { lo.x - e, lo.y - e, lo.z - e }, b { hi.x + e, hi.y + e, hi.z + e };
+            c.dc->fillQuad({ a.x, b.y, a.z }, { b.x, b.y, a.z }, { b.x, b.y, b.z }, { a.x, b.y, b.z }, fc);
+            c.dc->fillQuad({ a.x, a.y, a.z }, { b.x, a.y, a.z }, { b.x, a.y, b.z }, { a.x, a.y, b.z }, fc);
+            c.dc->fillQuad({ a.x, a.y, a.z }, { a.x, b.y, a.z }, { b.x, b.y, a.z }, { b.x, a.y, a.z }, fc);
+            c.dc->fillQuad({ a.x, a.y, b.z }, { a.x, b.y, b.z }, { b.x, b.y, b.z }, { b.x, a.y, b.z }, fc);
+            c.dc->fillQuad({ a.x, a.y, a.z }, { a.x, b.y, a.z }, { a.x, b.y, b.z }, { a.x, a.y, b.z }, fc);
+            c.dc->fillQuad({ b.x, a.y, a.z }, { b.x, b.y, a.z }, { b.x, b.y, b.z }, { b.x, a.y, b.z }, fc);
+        }
+    }
+    c.dc->flush();
+}
+
 void ChestOutlines::onRender(Event& evG) {
+    if (failed) return;
     auto& ev = reinterpret_cast<RenderLevelEvent&>(evG);
     if (!SDK::ClientInstance::get()->getLocalPlayer()) return;
-
-    // Selection-box material is depth tested (hidden behind blocks); UI color draws on top of everything.
-    MCDrawUtil3D dc { SDK::ClientInstance::get()->levelRenderer, ev.getScreenContext(),
-                      canSeeThroughWalls() ? SDK::MaterialPtr::getUIColor()
-                                           : SDK::MaterialPtr::getSelectionBoxMaterial() };
 
     auto colorFor = [&](Kind k) -> d2d::Color {
         switch (k) {
@@ -134,33 +211,30 @@ void ChestOutlines::onRender(Event& evG) {
         }
     };
 
-    int layers = (std::max)(1, static_cast<int>(std::get<FloatValue>(thickness)));
-    const bool doFill = std::get<BoolValue>(fill);
-
-    std::scoped_lock lk(foundLock);
-    for (auto& f : found) {
-        // chests are slightly smaller than a full block
-        float in = (f.kind == Chest || f.kind == EnderChest) ? 0.0625f : 0.f;
-        Vec3 lo { f.pos.x + in, static_cast<float>(f.pos.y), f.pos.z + in };
-        Vec3 hi { f.pos.x + 1.f - in, f.pos.y + (in > 0.f ? 0.875f : 1.f), f.pos.z + 1.f - in };
-        d2d::Color col = colorFor(f.kind);
-
-        for (int i = 0; i < layers; i++) {
-            float e = 0.003f + 0.004f * static_cast<float>(i);
-            dc.drawBox(AABB { Vec3 { lo.x - e, lo.y - e, lo.z - e }, Vec3 { hi.x + e, hi.y + e, hi.z + e } }, col);
-        }
-
-        if (doFill) {
-            d2d::Color fc = col.asAlpha(0.18f);
-            float e = 0.002f;
-            Vec3 a { lo.x - e, lo.y - e, lo.z - e }, b { hi.x + e, hi.y + e, hi.z + e };
-            dc.fillQuad({ a.x, b.y, a.z }, { b.x, b.y, a.z }, { b.x, b.y, b.z }, { a.x, b.y, b.z }, fc); // top
-            dc.fillQuad({ a.x, a.y, a.z }, { b.x, a.y, a.z }, { b.x, a.y, b.z }, { a.x, a.y, b.z }, fc); // bottom
-            dc.fillQuad({ a.x, a.y, a.z }, { a.x, b.y, a.z }, { b.x, b.y, a.z }, { b.x, a.y, a.z }, fc); // north
-            dc.fillQuad({ a.x, a.y, b.z }, { a.x, b.y, b.z }, { b.x, b.y, b.z }, { b.x, a.y, b.z }, fc); // south
-            dc.fillQuad({ a.x, a.y, a.z }, { a.x, b.y, a.z }, { a.x, b.y, b.z }, { a.x, a.y, b.z }, fc); // west
-            dc.fillQuad({ b.x, a.y, a.z }, { b.x, b.y, a.z }, { b.x, b.y, b.z }, { b.x, a.y, b.z }, fc); // east
+    std::vector<std::pair<AABB, d2d::Color>> boxes;
+    {
+        std::scoped_lock lk(foundLock);
+        if (found.empty()) return;
+        boxes.reserve(found.size());
+        for (auto& f : found) {
+            // chests are slightly smaller than a full block
+            float in = (f.kind == Chest || f.kind == EnderChest) ? 0.0625f : 0.f;
+            Vec3 lo { f.pos.x + in, static_cast<float>(f.pos.y), f.pos.z + in };
+            Vec3 hi { f.pos.x + 1.f - in, f.pos.y + (in > 0.f ? 0.875f : 1.f), f.pos.z + 1.f - in };
+            boxes.push_back({ AABB { lo, hi }, colorFor(f.kind) });
         }
     }
-    dc.flush();
+
+    // Selection-box material is depth tested (hidden behind blocks); UI color draws on top of everything.
+    MCDrawUtil3D dc { SDK::ClientInstance::get()->levelRenderer, ev.getScreenContext(),
+                      canSeeThroughWalls() ? SDK::MaterialPtr::getUIColor()
+                                           : SDK::MaterialPtr::getSelectionBoxMaterial() };
+    ChestOutlinesDraw ctx { &dc, &boxes, (std::max)(1, static_cast<int>(std::get<FloatValue>(thickness))),
+                            std::get<BoolValue>(fill) };
+    if (!guardedCall(&ChestOutlines::drawImpl, &ctx)) {
+        failed = true;
+        Latite::getClientMessageQueue().push(
+            std::string("\xC2\xA7" "d[Eternal]\xC2\xA7" "r Chest Outlines couldn't draw on this game version and "
+                        "paused itself. Toggle it off and on to retry."));
+    }
 }

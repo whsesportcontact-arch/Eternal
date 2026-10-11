@@ -2,6 +2,7 @@
 #include "../../Module.h"
 #include <unordered_map>
 #include <mutex>
+#include <atomic>
 
 // Eternal: outlines chests, barrels, shulker boxes and more around you.
 // "See Through Walls" only works in your own singleplayer worlds; on servers/Realms
@@ -12,6 +13,10 @@ public:
 
     void onTick(Event& ev);
     void onRender(Event& ev);
+    void onEnable() override;
+
+    static void scanImpl(void* ctx);
+    static void drawImpl(void* ctx);
 
 private:
     enum Kind : uint8_t { None, Chest, Barrel, Shulker, EnderChest, Hopper, Furnace };
@@ -46,4 +51,7 @@ private:
     std::mutex foundLock;
     std::unordered_map<SDK::BlockLegacy*, Kind> kindCache;
     int tickCounter = 0;
+    std::atomic_bool failed = false;
+
+    friend struct ChestOutlinesScan;
 };
