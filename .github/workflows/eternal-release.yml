@@ -38,7 +38,7 @@ jobs:
             -DLATITE_BUILD_TIMESTAMP=${{ steps.ts.outputs.timestamp }}
           cmake --build build 2>&1 | Tee-Object -FilePath build-log.txt
           if ($LASTEXITCODE -ne 0) {
-            $errs = Select-String -Path build-log.txt -Pattern 'error|FAILED' | Select-Object -First 60 | ForEach-Object { $_.Line.Trim() }
+            $errs = Select-String -Path build-log.txt -CaseSensitive -Pattern ': (fatal )?error [A-Z]+[0-9]+|FAILED:|CMake Error' | Select-Object -First 60 | ForEach-Object { $_.Line.Trim() }
             $msg = ($errs -join '%0A')
             Write-Output "::error title=DLL build failed::$msg"
             exit 1
@@ -52,7 +52,7 @@ jobs:
             -DETERNAL_DLL_URL="https://github.com/${{ github.repository }}/releases/latest/download/Eternal.dll"
           cmake --build launcher-build 2>&1 | Tee-Object -FilePath launcher-log.txt
           if ($LASTEXITCODE -ne 0) {
-            $errs = Select-String -Path launcher-log.txt -Pattern 'error|FAILED' | Select-Object -First 60 | ForEach-Object { $_.Line.Trim() }
+            $errs = Select-String -Path launcher-log.txt -CaseSensitive -Pattern ': (fatal )?error [A-Z]+[0-9]+|FAILED:|CMake Error' | Select-Object -First 60 | ForEach-Object { $_.Line.Trim() }
             $msg = ($errs -join '%0A')
             Write-Output "::error title=Launcher build failed::$msg"
             exit 1
