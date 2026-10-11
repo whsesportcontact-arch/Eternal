@@ -80,9 +80,9 @@ void HUDEditor::onRender(Event& ev) {
             Vec2 btnPos = ssRec.center({ 200.f, 60.f });
             d2d::Rect btnRect = { btnPos, Vec2(btnPos.x + buttonWidth, btnPos.y + buttonHeight) };
 
-            d2d::Color oCol = d2d::Color::RGB(0x7, 0x7, 0x7).asAlpha(0.75f);
+            d2d::Color oCol = d2d::Color::RGB(0x08, 0x05, 0x0E).asAlpha(0.92f);
             static d2d::Color col = oCol;
-            d2d::Color outlineCol = d2d::Color::RGB(0, 0, 0).asAlpha(0.28f);
+            d2d::Color outlineCol = d2d::Color::RGB(0x8B, 0x3D, 0xFF).asAlpha(0.45f);
 
             bool state = shouldSelect(btnRect, cursorPos);
             if (state && justClicked[0]) {
@@ -420,7 +420,7 @@ void HUDEditor::doSnapping(Vec2 const&) {
 
         D2DUtil dc;
 
-        Color col = d2d::Color(0.5, 1.0, 1.0);
+        Color col = d2d::Color(0.72f, 0.55f, 1.0f); // purple snap lines
         float thickness = 1.f;
 
         dragMod->snappingX = SnapValue();

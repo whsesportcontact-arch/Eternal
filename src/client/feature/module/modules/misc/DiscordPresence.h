@@ -57,6 +57,8 @@ private:
         std::pair<std::string_view, std::string_view> { "BED", "BedWars" },
     };
 
+    // TODO(Eternal): this is Latite's Discord app, so Discord will still show "Latite Client".
+    // Create your own app at discord.com/developers/applications and paste its Application ID here.
     const std::string discordApplicationId = "1066896173799047199";
     const std::chrono::seconds presenceCheckInterval { 5 };
     const std::chrono::seconds presenceRefreshInterval { 60 };

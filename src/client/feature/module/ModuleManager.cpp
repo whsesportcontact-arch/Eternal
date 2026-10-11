@@ -57,6 +57,13 @@
 #include "modules/hud/WAILA.h"
 #include "modules/hud/DirectionHud.h"
 
+// Eternal modules
+#include "modules/eternal/Watermark.h"
+#include "modules/eternal/ModuleList.h"
+#include "modules/eternal/SessionTimer.h"
+#include "modules/eternal/MemoryUsage.h"
+#include "modules/eternal/HealthDisplay.h"
+
 #include "client/event/events/KeyUpdateEvent.h"
 
 ModuleManager::ModuleManager() {
@@ -114,6 +121,13 @@ ModuleManager::ModuleManager() {
     this->items.push_back(std::make_shared<BlockGame>());
     this->items.push_back(std::make_shared<SkinStealer>());
     this->items.push_back(std::make_shared<KillNotification>());
+
+    // Eternal modules
+    this->items.push_back(std::make_shared<Watermark>());
+    this->items.push_back(std::make_shared<ModuleList>());
+    this->items.push_back(std::make_shared<SessionTimer>());
+    this->items.push_back(std::make_shared<MemoryUsage>());
+    this->items.push_back(std::make_shared<HealthDisplay>());
 
     for (auto& mod : items) {
         mod->onInit();

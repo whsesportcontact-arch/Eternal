@@ -152,11 +152,11 @@ DWORD __stdcall startThreadImpl(HINSTANCE dll) {
 #endif
 
 #if defined(LATITE_NIGHTLY)
-    Logger::Info("Latite Client [NIGHTLY] {}", Latite::version);
+    Logger::Info("Eternal Client [NIGHTLY] {}", Latite::version);
 #elif defined(LATITE_DEBUG)
-    Logger::Info("Latite Client [DEBUG] {}", Latite::version);
+    Logger::Info("Eternal Client [DEBUG] {}", Latite::version);
 #else
-    Logger::Info("Latite Client {}", Latite::version);
+    Logger::Info("Eternal Client {}", Latite::version);
 #endif
 
     char path[MAX_PATH] {};
@@ -214,7 +214,7 @@ DWORD __stdcall startThreadImpl(HINSTANCE dll) {
         // SDK::internalVers = vers;
     } else {
         std::stringstream ss;
-        ss << "Latite Client does not support your version: " << Latite::get().gameVersion
+        ss << "Eternal Client does not support your version: " << Latite::get().gameVersion
            << ". Latite only supports the following versions:\n\n";
 
         for (const auto key : Latite::supportedMinecraftVersions) {
@@ -335,7 +335,7 @@ DWORD __stdcall startThreadImpl(HINSTANCE dll) {
 
     Latite::get().initialize(dll);
 
-    Logger::Info("Initialized Latite Client");
+    Logger::Info("Initialized Eternal Client");
     return 0ul;
     END_ERROR_HANDLER
 }
@@ -399,7 +399,7 @@ BOOL WINAPI DllMainImpl(HINSTANCE hinstDLL, // handle to DLL module
         MH_Uninitialize();
 
         hasInjected = false;
-        Logger::Info("Latite Client detached.");
+        Logger::Info("Eternal Client detached.");
 
 #ifdef LATITE_CRASH_REPORTING
         DebugExceptionHandler::Uninstall();
@@ -589,11 +589,11 @@ void Latite::threadsafeInit() {
     std::string vstr(this->version);
 
 #if defined(LATITE_NIGHTLY)
-    auto ws = util::StrToWStr("Latite Client [NIGHTLY] " + gameVersion + " " + vstr + "/" + getBuildTimestamp());
+    auto ws = util::StrToWStr("Eternal Client [NIGHTLY] " + gameVersion + " " + vstr + "/" + getBuildTimestamp());
 #elif defined(LATITE_DEBUG)
-    auto ws = util::StrToWStr("Latite Client [DEBUG] " + gameVersion + " " + vstr + "/" + getBuildTimestamp());
+    auto ws = util::StrToWStr("Eternal Client [DEBUG] " + gameVersion + " " + vstr + "/" + getBuildTimestamp());
 #else
-    auto ws = util::StrToWStr("Latite Client " + vstr);
+    auto ws = util::StrToWStr("Eternal Client " + vstr);
 #endif
 
     // app.Title(ws);
@@ -786,7 +786,7 @@ void Latite::initSettings() {
     }
 
     {
-        // auto set = std::make_shared<Setting>("broadcastClientUsage", "Latite Client Presence", "If you leave this on,
+        // auto set = std::make_shared<Setting>("broadcastClientUsage", "Eternal Client Presence", "If you leave this on,
         // others with Latite will see that you are using Latite and you will see other people who use Latite.");
         // set->value = &this->broadcastUsage;
         // this->getSettings().addSetting(set);

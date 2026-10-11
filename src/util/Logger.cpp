@@ -50,7 +50,7 @@ void Logger::LogInternal(Level level, std::string str) {
     std::string mstr = pref + str + "\n";
     auto path = util::GetLatitePath();
     std::filesystem::path logPath = path / "Logs" / "latest.log";
-    std::string archiveLogFileName = "LatiteRecode-" + oss.str() + ".log";
+    std::string archiveLogFileName = "Eternal-" + oss.str() + ".log";
     std::filesystem::path archiveLogPath = path / "Logs" / archiveLogFileName;
 
     // using 2 file streams here might be bad practice but honestly

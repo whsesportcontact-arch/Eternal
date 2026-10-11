@@ -183,8 +183,8 @@ private:
     ValueType useDX11 = BoolValue(false);
     ValueType forceDisableVSync = BoolValue(false);
     ValueType menuBlur = FloatValue(20.f);
-    ValueType accentColor = ColorValue(static_cast<float>(0x32) / 255.f, static_cast<float>(0x39) / 255.f,
-                                       static_cast<float>(0x76) / 255.f);
+    ValueType accentColor = ColorValue(static_cast<float>(0x8B) / 255.f, static_cast<float>(0x3D) / 255.f,
+                                       static_cast<float>(0xFF) / 255.f); // Eternal purple
     ValueType minimalViewBob = BoolValue(false);
     ValueType minecraftRenderer = BoolValue(false);
     ValueType textShadow = BoolValue(true);

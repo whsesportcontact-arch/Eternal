@@ -14,7 +14,7 @@ std::filesystem::path LatiteTemp::resolvePath(std::filesystem::path const& relat
         temp = std::filesystem::path(buffer);
     }
 
-    auto root = temp / "Latite";
+    auto root = temp / "Eternal";
     if (relative.empty()) {
         return root;
     }
@@ -35,8 +35,8 @@ void LatiteTemp::cleanup() {
         temp = std::filesystem::path(buffer);
     }
 
-    auto root = temp / "Latite";
-    if (root.empty() || root.filename().wstring() != L"Latite") {
+    auto root = temp / "Eternal";
+    if (root.empty() || root.filename().wstring() != L"Eternal") {
         return;
     }
 

@@ -216,10 +216,10 @@ void ClickGUI::onRender(Event&) {
     }
     calcAnim = std::lerp(calcAnim, isActive() ? 1.f : 0.f, Latite::getRenderer().getDeltaTime() * 0.2f);
 
-    d2d::Color outline = d2d::Color::RGB(0, 0, 0);
-    outline.a = 0.28f;
-    d2d::Color rcColor = d2d::Color::RGB(0x7, 0x7, 0x7);
-    rcColor.a = 0.75f;
+    d2d::Color outline = d2d::Color::RGB(0x8B, 0x3D, 0xFF); // purple rim
+    outline.a = 0.45f;
+    d2d::Color rcColor = d2d::Color::RGB(0x08, 0x05, 0x0E); // near-black with a purple tint
+    rcColor.a = 0.92f;
     rect.round();
 
     if (!isActive()) return;
@@ -266,7 +266,7 @@ void ClickGUI::onRender(Event&) {
         // Latite Text
         float realLogoHeight = rect.getHeight() * 0.077921f;
         float titleSize = 25.f * adaptedScale;
-        std::wstring titleText = L"\x202ALatite Client\x202C";
+        std::wstring titleText = L"\x202AEternal Client\x202C";
         float titleGap = 9.f * adaptedScale;
         float titleWidth = 500.f * adaptedScale;
         RectF titleRect = rtl ? RectF { logoRect.left - titleGap - titleWidth, logoRect.top, logoRect.left - titleGap,
@@ -367,7 +367,7 @@ void ClickGUI::onRender(Event&) {
         float searchRound = searchHeight * 0.416f;
 
         searchRect = d2d::rectFromStart(rect, offX, logoRect.bottom + gapY, searchWidth, searchHeight, rtl);
-        auto searchCol = d2d::Color::RGB(0x70, 0x70, 0x70).asAlpha(0.28f);
+        auto searchCol = d2d::Color::RGB(0x5A, 0x3D, 0x80).asAlpha(0.30f);
 
         if (shouldSelect(searchRect, cursorPos)) {
             cursor = Cursor::IBeam;
@@ -789,7 +789,7 @@ void ClickGUI::onRender(Event&) {
                     dc.ctx->PushAxisAlignedClip(clipRect.get(), D2D1_ANTIALIAS_MODE_ALIASED);
                 }
 
-                dc.fillRoundedRectangle(modRectActual, d2d::Color::RGB(0x44, 0x44, 0x44).asAlpha(0.22f),
+                dc.fillRoundedRectangle(modRectActual, d2d::Color::RGB(0x2A, 0x17, 0x45).asAlpha(0.35f),
                                         .22f * modHeight);
                 dc.drawRoundedRectangle(modRectActual, accentColor.asAlpha(1.f * mod.lerpToggle), .22f * modHeight, 1.f,
                                         DrawUtil::OutlinePosition::Inside);
@@ -1035,12 +1035,12 @@ void ClickGUI::onRender(Event&) {
                     scrollbarThumbRect = { track.left, thumbY, track.right, thumbY + thumbHeight };
                 }
             }
-            dc.fillRoundedRectangle(scrollbarTrackRect, d2d::Color::RGB(0x55, 0x55, 0x55).asAlpha(0.28f),
+            dc.fillRoundedRectangle(scrollbarTrackRect, d2d::Color::RGB(0x3B, 0x2E, 0x4D).asAlpha(0.35f),
                                     trackWidth * 0.5f);
             dc.fillRoundedRectangle(scrollbarThumbRect,
                                     (draggingScrollbar || scrollbarThumbRect.contains(cursorPos))
                                         ? accentColor
-                                        : d2d::Color::RGB(0xD2, 0xD2, 0xD2).asAlpha(0.78f),
+                                        : d2d::Color::RGB(0xB7, 0x8C, 0xFF).asAlpha(0.78f),
                                     trackWidth * 0.5f);
         } else {
             scrollbarTrackRect = {};
@@ -1516,7 +1516,7 @@ float ClickGUI::drawSetting(Setting* set, SettingGroup*, Vec2 const& pos, D2DUti
             animatedDropdownRect.bottom = dropdownRect.top + dropdownRect.getHeight() * dropdownAnim;
 
             dc.ctx->PushAxisAlignedClip(animatedDropdownRect.get(), D2D1_ANTIALIAS_MODE_ALIASED);
-            dc.fillRoundedRectangle(dropdownRect, d2d::Color::RGB(0x2E, 0x2E, 0x2E).asAlpha(0.96f), round);
+            dc.fillRoundedRectangle(dropdownRect, d2d::Color::RGB(0x14, 0x0C, 0x20).asAlpha(0.96f), round);
             dc.drawRoundedRectangle(dropdownRect, d2d::Color(1.f, 1.f, 1.f, 0.18f), round, 0.75f,
                                     DrawUtil::OutlinePosition::Inside);
 
@@ -2137,7 +2137,7 @@ void ClickGUI::drawColorPicker() {
 
     // draw menu
 
-    dc.fillRoundedRectangle(cPickerRect, d2d::Color::RGB(0x7, 0x7, 0x7).asAlpha(0.8f), 19.f * adaptedScale);
+    dc.fillRoundedRectangle(cPickerRect, d2d::Color::RGB(0x08, 0x05, 0x0E).asAlpha(0.92f), 19.f * adaptedScale);
     dc.drawRoundedRectangle(cPickerRect, d2d::Color::RGB(0, 0, 0).asAlpha(0.28f), 19.f * adaptedScale,
                             4.f * adaptedScale, DrawUtil::OutlinePosition::Outside);
 

@@ -21,7 +21,7 @@ DebugInfo::DebugInfo()
 
 namespace {
     std::string getMinecraftVersion() {
-        return std::format("Latite Client {}, Minecraft {}", Latite::get().version, Latite::get().gameVersion);
+        return std::format("Eternal Client {}, Minecraft {}", Latite::get().version, Latite::get().gameVersion);
     }
     std::string getFPS() {
         return std::format("FPS: {}", Latite::get().getTimings().getFPS());

@@ -16,7 +16,7 @@ protected:
     ValueType textSizeS = FloatValue(30.f);
 
     ValueType textColor = ColorValue(1.f, 1.f, 1.f, 1.f);
-    ValueType bgColor = ColorValue(0.f, 0.f, 0.f, 0.5f);
+    ValueType bgColor = ColorValue(0.03f, 0.02f, 0.05f, 0.6f);
 
     ValueType prefix = TextValue(L"");
     ValueType suffix = TextValue(L"");
@@ -24,7 +24,7 @@ protected:
     ValueType showOutline = BoolValue(false);
 
     ValueType outlineThickness = FloatValue(2.f);
-    ValueType outlineColor = ColorValue(1.f, 1.f, 1.f, 1.f);
+    ValueType outlineColor = ColorValue(0.55f, 0.24f, 1.f, 1.f);
 
     ValueType radius = FloatValue(0.f);
 

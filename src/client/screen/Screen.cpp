@@ -98,8 +98,8 @@ void Screen::onRenderOverlay(Event& ev) {
             textRect.right += 5.f;
 
             float rad = height * 0.25f;
-            dc.fillRoundedRectangle(textRect, d2d::Color(0.f, 0.f, 0.f, 0.6f), rad);
-            dc.drawRoundedRectangle(textRect, d2d::Color(0.9f, 0.9f, 0.9f, 1.f), rad, 1.f);
+            dc.fillRoundedRectangle(textRect, d2d::Color(0.03f, 0.02f, 0.06f, 0.85f), rad);
+            dc.drawRoundedRectangle(textRect, d2d::Color(0.55f, 0.24f, 1.f, 1.f), rad, 1.f);
             dc.drawText(textRect, this->tooltip.value(), d2d::Color(1.f, 1.f, 1.f, 0.8f),
                         Renderer::FontSelection::PrimaryRegular, 15.f, DWRITE_TEXT_ALIGNMENT_CENTER,
                         DWRITE_PARAGRAPH_ALIGNMENT_CENTER);

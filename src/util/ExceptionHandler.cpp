@@ -120,7 +120,7 @@ namespace {
         return oss.str();
     }
 
-    constexpr std::string_view crashReportTitle = "Latite Client Crash Report";
+    constexpr std::string_view crashReportTitle = "Eternal Client Crash Report";
     constexpr size_t crashReportWidth = 75;
 
     std::string MakeCenteredDivider(std::string_view title, char fill, size_t width) {
@@ -158,7 +158,7 @@ namespace {
         localtime_s(&now, &t);
 
         std::ostringstream oss;
-        oss << "LatiteRecode-" << std::put_time(&now, "%Y-%m-%d") << ".log";
+        oss << "Eternal-" << std::put_time(&now, "%Y-%m-%d") << ".log";
         return LogsPath() / oss.str();
     }
 
@@ -703,13 +703,13 @@ std::filesystem::path DebugExceptionHandler::WriteCrashReport(EXCEPTION_POINTERS
 
 #if defined(LATITE_NIGHTLY)
     std::string baseName =
-        std::format("LatiteNightlyCrash-{}", MakeTimestamp(true), GetCurrentProcessId(), GetCurrentThreadId());
+        std::format("EternalNightlyCrash-{}", MakeTimestamp(true), GetCurrentProcessId(), GetCurrentThreadId());
 #elif defined(LATITE_DEBUG)
     std::string baseName =
-        std::format("LatiteDebugCrash-{}", MakeTimestamp(true), GetCurrentProcessId(), GetCurrentThreadId());
+        std::format("EternalDebugCrash-{}", MakeTimestamp(true), GetCurrentProcessId(), GetCurrentThreadId());
 #else
     std::string baseName =
-        std::format("LatiteCrash-{}", MakeTimestamp(true), GetCurrentProcessId(), GetCurrentThreadId());
+        std::format("EternalCrash-{}", MakeTimestamp(true), GetCurrentProcessId(), GetCurrentThreadId());
 #endif
 
     auto attemptedDumpPath = CrashPath() / (baseName + ".dmp");
