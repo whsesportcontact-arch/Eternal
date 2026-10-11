@@ -1,0 +1,79 @@
+name: Build Eternal
+
+# Builds Eternal.dll + EternalLauncher.exe on every push and publishes them as the "latest" release.
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v3
+
+      - name: Build timestamp
+        id: ts
+        shell: bash
+        run: echo "timestamp=$(date -u +"%Y-%m-%d_%H-%M-%SZ")" >> "$GITHUB_OUTPUT"
+
+      - name: Build Eternal.dll
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_C_COMPILER=cl.exe `
+            -DCMAKE_CXX_COMPILER=cl.exe `
+            -DLATITE_BUILD_TIMESTAMP=${{ steps.ts.outputs.timestamp }}
+          cmake --build build
+
+      - name: Build EternalLauncher.exe
+        run: |
+          cmake -S launcher -B launcher-build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_CXX_COMPILER=cl.exe `
+            -DETERNAL_DLL_URL="https://github.com/${{ github.repository }}/releases/latest/download/Eternal.dll"
+          cmake --build launcher-build
+
+      - name: Upload build (kept 90 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eternal-${{ steps.ts.outputs.timestamp }}
+          path: |
+            build/Eternal.dll
+            launcher-build/EternalLauncher.exe
+          if-no-files-found: error
+
+      - name: Replace previous release
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete latest -y --cleanup-tag || true
+
+      - name: Publish release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2.3.2
+        with:
+          tag_name: latest
+          name: Eternal Client (latest build)
+          body: |
+            Download **EternalLauncher.exe** and run it. It grabs the newest Eternal.dll automatically,
+            starts Minecraft and loads Eternal. Press **M** in game to open the menu.
+
+            Built ${{ steps.ts.outputs.timestamp }}
+          make_latest: true
+          files: |
+            build/Eternal.dll
+            launcher-build/EternalLauncher.exe
