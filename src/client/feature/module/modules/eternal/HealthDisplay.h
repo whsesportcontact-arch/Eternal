@@ -1,7 +1,7 @@
 #pragma once
 #include "../../TextModule.h"
 
-// Eternal: your exact health as a number.
+// Enta: your exact health as a number.
 class HealthDisplay : public TextModule {
 public:
     HealthDisplay();

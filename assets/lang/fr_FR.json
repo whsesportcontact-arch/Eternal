@@ -1,7 +1,7 @@
 {
   "name": "Français (FR)",
   "translations": {
-    "client.intro.welcome": "Bienvenue sur le client Eternal !",
+    "client.intro.welcome": "Bienvenue sur le client Enta !",
     "client.intro.menubutton": "Appuyez sur {} dans un monde ou un serveur pour ouvrir le menu des modules.",
     "client.modules.blockedOnServer.name": "{} sera bloqué sur ce serveur.",
     "client.ui.hudEditor.modSettings.name": "Paramètres des mods",
@@ -323,7 +323,7 @@
     "client.module.commandShortcuts.name": "Utiliser des raccourcis pour les commandes",
     "client.module.commandShortcuts.desc": "Raccourcis pour les commandes du genre : /gmc, /gms, etc.",
     "client.module.discordPresence.name": "Statut Discord (RPC)",
-    "client.module.discordPresence.desc": "Affiche votre session Eternal sur votre profil Discord.",
+    "client.module.discordPresence.desc": "Affiche votre session Enta sur votre profil Discord.",
     "client.module.debugInfo.name": "Interface d'informations de la version Java",
     "client.module.debugInfo.desc": "Affiche des informations utiles de façon similaire au F3 de la version Java.",
     "client.module.nickname.name": "Vous renommer dans le tchat",
@@ -506,7 +506,7 @@
     "client.module.hiveTranslate.translatedFrom": "Traduit de",
     "client.commands.help.desc": "Affiche toutes les commandes et leurs descriptions.",
     "client.commands.eject.ejectMsg.name": "Le client a été éjecté.",
-    "client.commands.eject.desc": "Retirer Eternal du jeu (revenir en vanilla).",
+    "client.commands.eject.desc": "Retirer Enta du jeu (revenir en vanilla).",
     "client.commands.setPrefix.success.name": "Le préfixe des commandes a été défini sur &7'{}'",
     "client.commands.setPrefix.desc": "Définir le préfixe des commandes",
     "client.commands.toggle.msg.unknownModule.name": "Module '{}' inconnu",

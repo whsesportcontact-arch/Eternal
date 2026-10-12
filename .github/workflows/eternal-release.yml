@@ -1,6 +1,6 @@
-name: Build Eternal
+name: Build Enta
 
-# Builds Eternal.dll + EternalLauncher.exe on every push and publishes them as the "latest" release.
+# Builds Enta.dll + EntaLauncher.exe on every push and publishes them as the "latest" release.
 on:
   push:
     branches: ["main"]
@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: echo "timestamp=$(date -u +"%Y-%m-%d_%H-%M-%SZ")" >> "$GITHUB_OUTPUT"
 
-      - name: Build Eternal.dll
+      - name: Build Enta.dll
         run: |
           cmake -B build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
@@ -44,12 +44,12 @@ jobs:
             exit 1
           }
 
-      - name: Build EternalLauncher.exe
+      - name: Build EntaLauncher.exe
         run: |
           cmake -S launcher -B launcher-build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_CXX_COMPILER=cl.exe `
-            -DETERNAL_DLL_URL="https://github.com/${{ github.repository }}/releases/latest/download/Eternal.dll"
+            -DENTA_DLL_URL="https://github.com/${{ github.repository }}/releases/latest/download/Enta.dll"
           cmake --build launcher-build 2>&1 | Tee-Object -FilePath launcher-log.txt
           if ($LASTEXITCODE -ne 0) {
             $errs = Select-String -Path launcher-log.txt -CaseSensitive -Pattern ': (fatal )?error [A-Z]+[0-9]+|FAILED:|CMake Error' | Select-Object -First 60 | ForEach-Object { $_.Line.Trim() }
@@ -58,13 +58,17 @@ jobs:
             exit 1
           }
 
+      - name: Copy for old launchers
+        shell: bash
+        run: cp build/Enta.dll build/Eternal.dll  # EternalLauncher.exe still downloads this name
+
       - name: Upload build (kept 90 days)
         uses: actions/upload-artifact@v4
         with:
-          name: Eternal-${{ steps.ts.outputs.timestamp }}
+          name: Enta-${{ steps.ts.outputs.timestamp }}
           path: |
-            build/Eternal.dll
-            launcher-build/EternalLauncher.exe
+            build/Enta.dll
+            launcher-build/EntaLauncher.exe
           if-no-files-found: error
 
       - name: Replace previous release
@@ -79,13 +83,14 @@ jobs:
         uses: softprops/action-gh-release@v2.3.2
         with:
           tag_name: latest
-          name: Eternal Client (latest build)
+          name: Enta Client (latest build)
           body: |
-            Download **EternalLauncher.exe** and run it. It grabs the newest Eternal.dll automatically,
-            starts Minecraft and loads Eternal. Press **M** in game to open the menu.
+            Download **EntaLauncher.exe** and run it. It grabs the newest Enta.dll automatically,
+            starts Minecraft and loads Enta. Press **M** in game to open the menu.
 
             Built ${{ steps.ts.outputs.timestamp }}
           make_latest: true
           files: |
+            build/Enta.dll
             build/Eternal.dll
-            launcher-build/EternalLauncher.exe
+            launcher-build/EntaLauncher.exe

@@ -1,7 +1,7 @@
 #pragma once
 #include "../../TextModule.h"
 
-// Eternal: an "ArrayList" that lists every module you currently have enabled.
+// Enta: an "ArrayList" that lists every module you currently have enabled.
 class ModuleList : public TextModule {
 public:
     ModuleList();

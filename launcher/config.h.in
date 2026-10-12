@@ -1,2 +1,2 @@
 #pragma once
-#define ETERNAL_DLL_URL L"@ETERNAL_DLL_URL@"
+#define ENTA_DLL_URL L"@ENTA_DLL_URL@"

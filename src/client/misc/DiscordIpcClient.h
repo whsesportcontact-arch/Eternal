@@ -14,7 +14,7 @@ public:
         std::string details;
         std::string state;
         std::string largeImageKey = "latite";
-        std::string largeImageText = "Eternal Client Logo";
+        std::string largeImageText = "Enta Client Logo";
         std::string smallImageKey;
         std::string smallImageText;
         std::int64_t startTimestamp = 0;

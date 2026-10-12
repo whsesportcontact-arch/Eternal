@@ -9,7 +9,7 @@
 
 namespace {
     void eternalMsg(std::string const& s) {
-        Latite::getClientMessageQueue().push(std::string("\xC2\xA7" "d[Eternal]\xC2\xA7" "r ") + s);
+        Latite::getClientMessageQueue().push(std::string("\xC2\xA7" "d[Enta]\xC2\xA7" "r ") + s);
     }
 }
 

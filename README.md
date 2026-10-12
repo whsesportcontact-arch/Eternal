@@ -1,12 +1,12 @@
-# Eternal Client
+# Enta Client
 
 A black-and-purple Minecraft Bedrock (Windows) client: QoL and PvP HUD mods, no cheats.
 
-Eternal is a fork of [Latite Client](https://github.com/LatiteClient/Latite) and is licensed under the
-GNU GPL v3 (see `LICENSE`). If you share Eternal with anyone, you must also share its source code.
+Enta is a fork of [Latite Client](https://github.com/LatiteClient/Latite) and is licensed under the
+GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share its source code.
 
-## What Eternal changes
-- **Branding:** "Eternal Client" everywhere, new logo, `Eternal.dll` output, settings stored in `%APPDATA%\Eternal`
+## What Enta changes
+- **Branding:** "Enta Client" everywhere, new logo, `Enta.dll` output, settings stored in `%APPDATA%\Enta`
 - **Theme:** near-black menu with a purple accent (#8B3DFF), purple outlines, scrollbar, snap lines and tooltips
 - **New modules:** Watermark, Module List (ArrayList), Session Timer, Memory Usage, Health Display
 - All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Motion Blur, Toggle Sprint, Minimap...)
@@ -21,7 +21,7 @@ From the **x64 Native Tools Command Prompt for VS 2026**:
 cmake --preset x64-release
 cmake --build out/build/x64-release
 ```
-Output: `out/build/x64-release/Eternal.dll`. Load it with any injector that supports custom DLLs
+Output: `out/build/x64-release/Enta.dll`. Load it with any injector that supports custom DLLs
 (for example Jiayi Launcher or the Latite Launcher's custom DLL option).
 
 ## Staying up to date with new Minecraft versions
@@ -29,7 +29,7 @@ Output: `out/build/x64-release/Eternal.dll`. Load it with any injector that supp
 git fetch --unshallow upstream   # first time only; afterwards just: git fetch upstream
 git merge upstream/main
 ```
-That pulls Latite's updated signatures. Fix any merge conflicts (usually only in the files Eternal changed), then rebuild.
+That pulls Latite's updated signatures. Fix any merge conflicts (usually only in the files Enta changed), then rebuild.
 
 ## TODO
 - Create your own Discord app and put its ID in `src/client/feature/module/modules/misc/DiscordPresence.h`

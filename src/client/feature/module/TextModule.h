@@ -16,17 +16,18 @@ protected:
     ValueType textSizeS = FloatValue(30.f);
 
     ValueType textColor = ColorValue(1.f, 1.f, 1.f, 1.f);
-    ValueType bgColor = ColorValue(0.03f, 0.02f, 0.05f, 0.6f);
+    ValueType bgColor = ColorValue(0.02f, 0.01f, 0.04f, 0.78f);
+    ValueType starryBg = BoolValue(true); // Enta: animated stars behind the text
 
     ValueType prefix = TextValue(L"");
     ValueType suffix = TextValue(L"");
 
-    ValueType showOutline = BoolValue(false);
+    ValueType showOutline = BoolValue(true);
 
-    ValueType outlineThickness = FloatValue(2.f);
-    ValueType outlineColor = ColorValue(0.55f, 0.24f, 1.f, 1.f);
+    ValueType outlineThickness = FloatValue(1.5f);
+    ValueType outlineColor = ColorValue(0.62f, 0.36f, 1.f, 0.85f);
 
-    ValueType radius = FloatValue(0.f);
+    ValueType radius = FloatValue(4.f);
 
     static constexpr int alignment_center = 0;
     static constexpr int alignment_left = 1;
@@ -73,4 +74,5 @@ protected:
 
 private:
     std::wstringstream processText(std::wstringstream& stream);
+    void drawStarsIn(DrawUtil& dc, d2d::Rect const& rc, float rad);
 };

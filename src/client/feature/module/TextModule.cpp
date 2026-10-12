@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "TextModule.h"
 #include "client/feature/setting/Setting.h"
+#include "client/render/EntaStars.h"
 
 void TextModule::onInit() {
     addSetting("fillBg", LocalizeString::get("client.textmodule.props.background.name"), L"", fillBg);
@@ -29,6 +30,8 @@ void TextModule::onInit() {
 
     addSetting("textCol", LocalizeString::get("client.textmodule.props.textColor.name"), L"", textColor);
     addSetting("bgColor", LocalizeString::get("client.textmodule.props.bgColor.name"), L"", bgColor);
+    addSetting("starryBg", L"Starry Background", L"Floating white and purple stars behind the text.", starryBg,
+               "fillBg"_istrue);
 
     alignment.addEntry({ alignment_center, LocalizeString::get("client.textmodule.props.alignmentCenter.name") });
     alignment.addEntry({ alignment_left, LocalizeString::get("client.textmodule.props.alignmentLeft.name") });
@@ -80,9 +83,12 @@ void TextModule::render(DrawUtil& dc, bool isDefault, bool inEditor) {
 
             rad = (std::get<FloatValue>(radius).value / 10.f) * (rc.getHeight() / 2.f);
 
+            if (std::get<BoolValue>(fillBg)) {
+                dc.fillRoundedRectangle(rc, realCol, rad);
+                drawStarsIn(dc, rc, rad);
+            }
             if (std::get<BoolValue>(showOutline))
                 dc.drawRoundedRectangle(rc, realOCol, rad, std::get<FloatValue>(outlineThickness));
-            if (std::get<BoolValue>(fillBg)) dc.fillRoundedRectangle(rc, realCol, rad);
             dc.drawText(rc, str.c_str(), realTCol, Renderer::FontSelection::SecondaryLight, textSize, align,
                         DWRITE_PARAGRAPH_ALIGNMENT_CENTER, !isDefault && !inEditor && cacheText);
         }
@@ -96,10 +102,12 @@ void TextModule::render(DrawUtil& dc, bool isDefault, bool inEditor) {
 
         if (!text.str().empty()) {
             rad = (std::get<FloatValue>(radius).value / 10.f) * (rc.getHeight() / 2.f);
+            if (std::get<BoolValue>(fillBg)) {
+                dc.fillRoundedRectangle(rc, std::get<ColorValue>(bgColor).getMainColor(), rad);
+                drawStarsIn(dc, rc, rad);
+            }
             if (std::get<BoolValue>(showOutline))
                 dc.drawRoundedRectangle(rc, realOCol, rad, std::get<FloatValue>(outlineThickness));
-            if (std::get<BoolValue>(fillBg))
-                dc.fillRoundedRectangle(rc, std::get<ColorValue>(bgColor).getMainColor(), rad);
             dc.drawText(rc, str.c_str(), realTCol, Renderer::FontSelection::SecondaryLight, textSize, align,
                         DWRITE_PARAGRAPH_ALIGNMENT_CENTER, !isDefault && !inEditor && cacheText);
         }
@@ -112,6 +120,16 @@ void TextModule::render(DrawUtil& dc, bool isDefault, bool inEditor) {
 
     // dc.fillRoundedRectangle(rc, Latite::get().getHUDBlurBrush(), rad);
     dc.flush();
+}
+
+void TextModule::drawStarsIn(DrawUtil& dc, d2d::Rect const& rc, float rad) {
+    if (!std::get<BoolValue>(starryBg)) return;
+    float w = rc.right - rc.left, h = rc.bottom - rc.top;
+    // keep stars away from rounded corners
+    d2d::Rect inner { rc.left + rad * 0.4f, rc.top + 1.f, rc.right - rad * 0.4f, rc.bottom - 1.f };
+    int count = std::clamp(static_cast<int>(w * h / 900.f), 4, 40);
+    float scale = (std::max)(1.f, h / 26.f);
+    enta::drawStars(dc, inner, count, scale, enta::seedFrom(name()), 0.9f);
 }
 
 std::wstringstream TextModule::processText(std::wstringstream& stream) {

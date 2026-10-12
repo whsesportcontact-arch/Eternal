@@ -184,7 +184,7 @@ private:
     ValueType forceDisableVSync = BoolValue(false);
     ValueType menuBlur = FloatValue(20.f);
     ValueType accentColor = ColorValue(static_cast<float>(0x8B) / 255.f, static_cast<float>(0x3D) / 255.f,
-                                       static_cast<float>(0xFF) / 255.f); // Eternal purple
+                                       static_cast<float>(0xFF) / 255.f); // Enta purple
     ValueType minimalViewBob = BoolValue(false);
     ValueType minecraftRenderer = BoolValue(false);
     ValueType textShadow = BoolValue(true);

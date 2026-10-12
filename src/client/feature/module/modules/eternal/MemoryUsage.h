@@ -1,7 +1,7 @@
 #pragma once
 #include "../../TextModule.h"
 
-// Eternal: how much RAM Minecraft is using.
+// Enta: how much RAM Minecraft is using.
 class MemoryUsage : public TextModule {
 public:
     MemoryUsage();

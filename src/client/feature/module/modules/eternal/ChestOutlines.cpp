@@ -15,7 +15,7 @@ ChestOutlines::ChestOutlines()
              L"Outlines chests, barrels, shulker boxes and other storage so your farms and sorters are easy to see.",
              GAME) {
     addSliderSetting("range", L"Range", L"How many blocks around you to look for storage.", range, FloatValue(4.f),
-                     FloatValue(32.f), FloatValue(1.f));
+                     FloatValue(60.f), FloatValue(1.f));
     addSliderSetting("thickness", L"Thickness", L"Outline thickness.", thickness, FloatValue(1.f), FloatValue(5.f),
                      FloatValue(1.f));
     addSetting("fill", L"Fill", L"Also tint the block faces.", fill);
@@ -90,10 +90,10 @@ void ChestOutlines::updateWallsMode() {
 
     if (local)
         Latite::getClientMessageQueue().push(std::string(
-            "\xC2\xA7" "d[Eternal]\xC2\xA7" "r Chest Outlines: See Through Walls is \xC2\xA7" "aON\xC2\xA7" "r (singleplayer world)."));
+            "\xC2\xA7" "d[Enta]\xC2\xA7" "r Chest Outlines: See Through Walls is \xC2\xA7" "aON\xC2\xA7" "r (singleplayer world)."));
     else
         Latite::getClientMessageQueue().push(std::string(
-            "\xC2\xA7" "d[Eternal]\xC2\xA7" "r Chest Outlines: See Through Walls is \xC2\xA7" "cOFF\xC2\xA7" "r here, you're on a server/Realm (") +
+            "\xC2\xA7" "d[Enta]\xC2\xA7" "r Chest Outlines: See Through Walls is \xC2\xA7" "cOFF\xC2\xA7" "r here, you're on a server/Realm (") +
             host + ").");
 }
 
@@ -113,6 +113,7 @@ struct ChestOutlinesScan {
     ChestOutlines* self;
     SDK::BlockSource* region;
     int px, py, pz, r, yr;
+    int xFrom, xTo; // this tick's slice of the sweep
     bool want[7];
     std::vector<std::pair<BlockPos, int>>* out;
 };
@@ -121,7 +122,7 @@ void ChestOutlines::scanImpl(void* ctxPtr) {
     auto& c = *static_cast<ChestOutlinesScan*>(ctxPtr);
     // stay inside the world's build limits
     int yMin = (std::max)(c.py - c.yr, -64), yMax = (std::min)(c.py + c.yr, 319);
-    for (int x = c.px - c.r; x <= c.px + c.r; x++) {
+    for (int x = c.xFrom; x <= c.xTo; x++) {
         for (int z = c.pz - c.r; z <= c.pz + c.r; z++) {
             for (int y = yMin; y <= yMax; y++) {
                 BlockPos bp { x, y, z };
@@ -138,56 +139,82 @@ void ChestOutlines::scanImpl(void* ctxPtr) {
 
 void ChestOutlines::onTick(Event&) {
     if (failed) return;
-    // rescan twice a second; storage doesn't move
-    if (++tickCounter % 10 != 0) return;
-    updateWallsMode();
+    ++tickCounter;
+    if (tickCounter % 10 == 0) updateWallsMode();
 
     auto ci = SDK::ClientInstance::get();
     auto lp = ci ? ci->getLocalPlayer() : nullptr;
     auto region = ci ? ci->getRegion() : nullptr;
     if (!lp || !region) {
+        sweeping = false;
         std::scoped_lock lk(foundLock);
         found.clear();
         return;
     }
 
-    Vec3 p = lp->getPos();
-    std::vector<std::pair<BlockPos, int>> raw;
-    raw.reserve(256);
+    // Start a new sweep at most every 10 ticks. Big ranges are split across several ticks so the game doesn't stutter.
+    if (!sweeping) {
+        if (tickCounter - lastSweepStart < 10) return;
+        lastSweepStart = tickCounter;
+        Vec3 p = lp->getPos();
+        sweep.px = static_cast<int>(std::floor(p.x));
+        sweep.py = static_cast<int>(std::floor(p.y));
+        sweep.pz = static_cast<int>(std::floor(p.z));
+        sweep.r = static_cast<int>(std::get<FloatValue>(range));
+        sweep.yr = (std::min)(sweep.r, 32);
+        sweep.nextX = sweep.px - sweep.r;
+        pending.clear();
+        sweeping = true;
+    }
+
+    constexpr int blocksPerTick = 40000;
+    int perColumn = (2 * sweep.r + 1) * (2 * sweep.yr + 1);
+    int cols = (std::max)(1, blocksPerTick / (std::max)(1, perColumn));
+    int xEnd = (std::min)(sweep.nextX + cols - 1, sweep.px + sweep.r);
+
     ChestOutlinesScan ctx { this,
                             region,
-                            static_cast<int>(std::floor(p.x)),
-                            static_cast<int>(std::floor(p.y)),
-                            static_cast<int>(std::floor(p.z)),
-                            static_cast<int>(std::get<FloatValue>(range)),
-                            (std::min)(static_cast<int>(std::get<FloatValue>(range)), 24),
+                            sweep.px,
+                            sweep.py,
+                            sweep.pz,
+                            sweep.r,
+                            sweep.yr,
+                            sweep.nextX,
+                            xEnd,
                             { false, std::get<BoolValue>(showChests), std::get<BoolValue>(showBarrels),
                               std::get<BoolValue>(showShulkers), std::get<BoolValue>(showEnderChests),
                               std::get<BoolValue>(showHoppers), std::get<BoolValue>(showFurnaces) },
-                            &raw };
+                            &pending };
 
     if (!guardedCall(&ChestOutlines::scanImpl, &ctx)) {
         failed = true;
+        sweeping = false;
         {
             std::scoped_lock lk(foundLock);
             found.clear();
         }
         Latite::getClientMessageQueue().push(
-            std::string("\xC2\xA7" "d[Eternal]\xC2\xA7" "r Chest Outlines hit an error on this game version and paused "
+            std::string("\xC2\xA7" "d[Enta]\xC2\xA7" "r Chest Outlines hit an error on this game version and paused "
                         "itself. Toggle it off and on to retry."));
         return;
     }
 
+    sweep.nextX = xEnd + 1;
+    if (sweep.nextX <= sweep.px + sweep.r) return; // more slices to go
+
+    // sweep finished: publish results
+    sweeping = false;
     std::vector<Found> next;
-    next.reserve(raw.size());
-    for (auto& [pos, k] : raw) next.push_back({ pos, static_cast<Kind>(k) });
+    next.reserve(pending.size());
+    for (auto& [pos, k] : pending) next.push_back({ pos, static_cast<Kind>(k) });
     std::scoped_lock lk(foundLock);
     found = std::move(next);
 }
 
 void ChestOutlines::onEnable() {
     failed = false; // toggling the module retries after an error
-    tickCounter = 9; // scan on the very next tick
+    sweeping = false;
+    lastSweepStart = tickCounter - 10; // scan on the very next tick
     reportedWalls = false;
 }
 
@@ -261,7 +288,7 @@ void ChestOutlines::onRender(Event& evG) {
     if (!guardedCall(&ChestOutlines::drawImpl, &ctx)) {
         failed = true;
         Latite::getClientMessageQueue().push(
-            std::string("\xC2\xA7" "d[Eternal]\xC2\xA7" "r Chest Outlines couldn't draw on this game version and "
+            std::string("\xC2\xA7" "d[Enta]\xC2\xA7" "r Chest Outlines couldn't draw on this game version and "
                         "paused itself. Toggle it off and on to retry."));
     }
 }

@@ -57,7 +57,7 @@
 #include "modules/hud/WAILA.h"
 #include "modules/hud/DirectionHud.h"
 
-// Eternal modules
+// Enta modules
 #include "modules/eternal/Watermark.h"
 #include "modules/eternal/ModuleList.h"
 #include "modules/eternal/SessionTimer.h"
@@ -125,7 +125,7 @@ ModuleManager::ModuleManager() {
     this->items.push_back(std::make_shared<SkinStealer>());
     this->items.push_back(std::make_shared<KillNotification>());
 
-    // Eternal modules
+    // Enta modules
     this->items.push_back(std::make_shared<Watermark>());
     this->items.push_back(std::make_shared<ModuleList>());
     this->items.push_back(std::make_shared<SessionTimer>());

@@ -13,8 +13,8 @@ private:
     ValueType outlineVanilla = BoolValue(false);
 
     ValueType outline = BoolValue(true);
-    ValueType outlineColor = ColorValue(0.72f, 0.45f, 1.f, 1.f); // Eternal purple
-    ValueType thickness = FloatValue(3.f);                        // Eternal: nested boxes = thicker line
+    ValueType outlineColor = ColorValue(0.72f, 0.45f, 1.f, 1.f); // Enta purple
+    ValueType thickness = FloatValue(3.f);                        // Enta: nested boxes = thicker line
 
     ValueType overlay = BoolValue(false);
     ValueType faceOverlay = BoolValue(false);

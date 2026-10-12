@@ -1,7 +1,7 @@
-// Eternal Launcher
-// Starts Minecraft Bedrock (Windows) and loads Eternal.dll into it.
-// On launch it tries to grab the newest Eternal.dll from this repo's GitHub releases,
-// and falls back to an Eternal.dll sitting next to the launcher.
+// Enta Launcher
+// Starts Minecraft Bedrock (Windows) and loads Enta.dll into it.
+// On launch it tries to grab the newest Enta.dll from this repo's GitHub releases,
+// and falls back to an Enta.dll sitting next to the launcher.
 
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -17,14 +17,14 @@
 #include <thread>
 #include <atomic>
 
-#ifndef ETERNAL_DLL_URL
-#define ETERNAL_DLL_URL L""
+#ifndef ENTA_DLL_URL
+#define ENTA_DLL_URL L""
 #endif
 
 namespace {
 
 constexpr wchar_t kGameExe[] = L"Minecraft.Windows.exe";
-constexpr wchar_t kDllName[] = L"Eternal.dll";
+constexpr wchar_t kDllName[] = L"Enta.dll";
 
 // theme
 constexpr COLORREF kBg = RGB(0x08, 0x05, 0x0E);
@@ -132,7 +132,7 @@ bool loadInto(DWORD pid, std::wstring const& dll, std::wstring& err) {
             DWORD code = 0;
             GetExitCodeThread(th, &code);
             ok = code != 0; // LoadLibrary returned a module handle
-            if (!ok) err = L"Minecraft refused to load Eternal.dll (wrong game version?).";
+            if (!ok) err = L"Minecraft refused to load Enta.dll (wrong game version?).";
             CloseHandle(th);
         } else {
             err = L"Couldn't start loader thread (error " + std::to_wstring(GetLastError()) + L").";
@@ -150,7 +150,7 @@ void launchWorker() {
     std::wstring dll = dir + L"\\" + kDllName;
 
     // 1. get the newest DLL
-    std::wstring url = ETERNAL_DLL_URL;
+    std::wstring url = ENTA_DLL_URL;
     if (!url.empty()) {
         setStatus(L"Checking for updates...");
         std::wstring tmp = dll + L".download";
@@ -159,13 +159,13 @@ void launchWorker() {
             // can't replace the file while Minecraft has it loaded; that's fine, we'll keep the old one
             if (!MoveFileExW(tmp.c_str(), dll.c_str(), MOVEFILE_REPLACE_EXISTING)) DeleteFileW(tmp.c_str());
         } else if (!fileExists(dll)) {
-            setStatus(L"Download failed and no Eternal.dll next to the launcher.");
+            setStatus(L"Download failed and no Enta.dll next to the launcher.");
             gBusy = false;
             return;
         }
     }
     if (!fileExists(dll)) {
-        setStatus(L"Eternal.dll is missing. Put it next to the launcher.");
+        setStatus(L"Enta.dll is missing. Put it next to the launcher.");
         gBusy = false;
         return;
     }
@@ -186,16 +186,16 @@ void launchWorker() {
         Sleep(6000);
     }
 
-    // 3. load Eternal
+    // 3. load Enta
     if (alreadyLoaded(pid)) {
-        setStatus(L"Eternal is already running. Press M in game.");
+        setStatus(L"Enta is already running. Press M in game.");
         gBusy = false;
         return;
     }
-    setStatus(L"Loading Eternal...");
+    setStatus(L"Loading Enta...");
     std::wstring err;
     if (loadInto(pid, dll, err))
-        setStatus(L"Done! Press M in game to open Eternal.");
+        setStatus(L"Done! Press M in game to open Enta.");
     else
         setStatus(err);
     gBusy = false;
@@ -233,7 +233,7 @@ void paint(HWND h) {
     // title
     SetTextColor(dc, kText);
     RECT t = { 96, 34, kW - 50, 66 };
-    DrawTextW(dc, L"ETERNAL", -1, &t, DT_LEFT | DT_SINGLELINE);
+    DrawTextW(dc, L"ENTA", -1, &t, DT_LEFT | DT_SINGLELINE);
     SelectObject(dc, gBodyFont);
     SetTextColor(dc, kSubText);
     RECT st = { 98, 66, kW - 20, 90 };
@@ -331,11 +331,11 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int show) {
     wc.hInstance = inst;
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hIcon = LoadIconW(inst, MAKEINTRESOURCEW(1));
-    wc.lpszClassName = L"EternalLauncher";
+    wc.lpszClassName = L"EntaLauncher";
     RegisterClassW(&wc);
 
     int x = (GetSystemMetrics(SM_CXSCREEN) - kW) / 2, y = (GetSystemMetrics(SM_CYSCREEN) - kH) / 2;
-    gWnd = CreateWindowExW(0, wc.lpszClassName, L"Eternal Launcher", WS_POPUP | WS_MINIMIZEBOX, x, y, kW, kH,
+    gWnd = CreateWindowExW(0, wc.lpszClassName, L"Enta Launcher", WS_POPUP | WS_MINIMIZEBOX, x, y, kW, kH,
                            nullptr, nullptr, inst, nullptr);
     HRGN rgn = CreateRoundRectRgn(0, 0, kW + 1, kH + 1, 18, 18);
     SetWindowRgn(gWnd, rgn, TRUE);

@@ -3,7 +3,7 @@
 #include "client/Latite.h"
 
 Watermark::Watermark()
-    : TextModule("Watermark", L"Watermark", L"Shows the Eternal Client name on your HUD.", HUD) {
+    : TextModule("Watermark", L"Watermark", L"Shows the Enta Client name on your HUD.", HUD) {
     addSetting("customText", L"Text", L"What the watermark says.", customText);
     addSetting("showVersion", L"Show Version", L"Show the client version next to the name.", showVersion);
     // purple by default to match the theme

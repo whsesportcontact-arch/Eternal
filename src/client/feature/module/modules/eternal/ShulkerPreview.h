@@ -2,7 +2,7 @@
 #include "../../TextModule.h"
 #include <map>
 
-// Eternal: hold a shulker box and press Shift to see what's inside.
+// Enta: hold a shulker box and press Shift to see what's inside.
 class ShulkerPreview : public TextModule {
 public:
     ShulkerPreview();

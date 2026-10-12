@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ClickGUI.h"
+#include "client/render/EntaStars.h"
 #include "client/event/Eventing.h"
 #include "client/event/events/RenderOverlayEvent.h"
 #include "client/event/events/RendererCleanupEvent.h"
@@ -237,7 +238,15 @@ void ClickGUI::onRender(Event&) {
 
     // Menu Rect
     dc.fillRoundedRectangle(rect, rcColor, 19.f * adaptedScale);
-    dc.drawRoundedRectangle(rect, outline, 19.f * adaptedScale, 4.f * adaptedScale, DrawUtil::OutlinePosition::Outside);
+    dc.drawRoundedRectangle(rect, outline, 19.f * adaptedScale, 2.f * adaptedScale, DrawUtil::OutlinePosition::Outside);
+    // Enta: End-portal starfield across the whole menu
+    {
+        float inset = 8.f * adaptedScale;
+        RectF starArea { rect.left + inset, rect.top + inset, rect.right - inset, rect.bottom - inset };
+        dc.ctx->PushAxisAlignedClip(starArea.get(), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        enta::drawStars(dc, starArea, 170, 1.7f * adaptedScale, 0xE17Au, 0.85f);
+        dc.ctx->PopAxisAlignedClip();
+    }
 
     float offX = 0.01689f * rect.getWidth();
     float offY = 0.03191f * rect.getHeight();
@@ -266,7 +275,7 @@ void ClickGUI::onRender(Event&) {
         // Latite Text
         float realLogoHeight = rect.getHeight() * 0.077921f;
         float titleSize = 25.f * adaptedScale;
-        std::wstring titleText = L"\x202A" L"Eternal Client\x202C";
+        std::wstring titleText = L"\x202A" L"Enta Client\x202C";
         float titleGap = 9.f * adaptedScale;
         float titleWidth = 500.f * adaptedScale;
         RectF titleRect = rtl ? RectF { logoRect.left - titleGap - titleWidth, logoRect.top, logoRect.left - titleGap,
@@ -789,9 +798,18 @@ void ClickGUI::onRender(Event&) {
                     dc.ctx->PushAxisAlignedClip(clipRect.get(), D2D1_ANTIALIAS_MODE_ALIASED);
                 }
 
-                dc.fillRoundedRectangle(modRectActual, d2d::Color::RGB(0x2A, 0x17, 0x45).asAlpha(0.35f),
+                dc.fillRoundedRectangle(modRectActual, d2d::Color::RGB(0x07, 0x04, 0x0D).asAlpha(0.92f),
                                         .22f * modHeight);
-                dc.drawRoundedRectangle(modRectActual, accentColor.asAlpha(1.f * mod.lerpToggle), .22f * modHeight, 1.f,
+                {
+                    // Enta: a few drifting stars inside each module card
+                    float ci = .18f * modHeight;
+                    RectF cardStars { modRectActual.left + ci, modRectActual.top + 2.f, modRectActual.right - ci,
+                                      modRectActual.top + modHeight - 2.f };
+                    enta::drawStars(dc, cardStars, 9, 1.25f * adaptedScale,
+                                    static_cast<uint32_t>(reinterpret_cast<uintptr_t>(mod.mod.get()) >> 4), 0.75f);
+                }
+                dc.drawRoundedRectangle(modRectActual, accentColor.asAlpha((std::max)(0.22f, 1.f * mod.lerpToggle)),
+                                        .22f * modHeight, (mod.lerpToggle > 0.5f ? 1.6f : 1.f) * adaptedScale + 0.5f,
                                         DrawUtil::OutlinePosition::Inside);
                 ;
                 if (renderExtended) {

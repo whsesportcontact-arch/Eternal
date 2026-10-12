@@ -223,7 +223,7 @@ std::filesystem::path util::GetRoamingPath() {
 }
 
 std::filesystem::path util::GetLatitePath() {
-    return GetRoamingPath() / "Eternal";
+    return GetRoamingPath() / "Enta";
 }
 
 std::wstring util::StrToWStr(std::string const& s) {

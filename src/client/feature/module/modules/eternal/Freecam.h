@@ -1,7 +1,7 @@
 #pragma once
 #include "../../Module.h"
 
-// Eternal: singleplayer freecam. Switches you to spectator mode to fly through blocks,
+// Enta: singleplayer freecam. Switches you to spectator mode to fly through blocks,
 // then puts you back exactly where you were. Needs cheats enabled in the world.
 class Freecam : public Module {
 public:

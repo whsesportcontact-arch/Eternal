@@ -4,7 +4,7 @@
 #include <mutex>
 #include <atomic>
 
-// Eternal: outlines chests, barrels, shulker boxes and more around you.
+// Enta: outlines chests, barrels, shulker boxes and more around you.
 // "See Through Walls" only works in your own singleplayer worlds; on servers/Realms
 // outlines are hidden behind blocks like normal.
 class ChestOutlines : public Module {
@@ -25,7 +25,7 @@ private:
     bool canSeeThroughWalls();
     void updateWallsMode();
 
-    ValueType range = FloatValue(16.f);
+    ValueType range = FloatValue(32.f);
     ValueType thickness = FloatValue(2.f);
     ValueType throughWalls = BoolValue(false);
     ValueType fill = BoolValue(false);
@@ -52,6 +52,12 @@ private:
     std::mutex foundLock;
     std::unordered_map<SDK::BlockLegacy*, Kind> kindCache;
     int tickCounter = 0;
+    int lastSweepStart = -100;
+    bool sweeping = false;
+    struct {
+        int px = 0, py = 0, pz = 0, r = 0, yr = 0, nextX = 0;
+    } sweep;
+    std::vector<std::pair<BlockPos, int>> pending;
     std::atomic_bool failed = false;
     std::atomic_bool wallsAllowed = false;
     bool reportedWalls = false;

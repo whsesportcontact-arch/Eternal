@@ -1,7 +1,7 @@
 #pragma once
 #include "../../TextModule.h"
 
-// Eternal: how long you've been in the current world/server.
+// Enta: how long you've been in the current world/server.
 class SessionTimer : public TextModule {
 public:
     SessionTimer();

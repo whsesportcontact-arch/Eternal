@@ -95,14 +95,14 @@ add_dependencies(Latite LatiteBuildTimestampGenerator)
 # Final artifact names. Keep these in CMake so the DLL CodeView record and
 # linker-generated PDB name agree, **do not rename the DLL/PDB after linking!!**
 set_target_properties(Latite PROPERTIES
-        OUTPUT_NAME_RELEASE "Eternal"
-        PDB_NAME_RELEASE "Eternal"
-        OUTPUT_NAME_RELWITHDEBINFO "Eternal"
-        PDB_NAME_RELWITHDEBINFO "Eternal"
-        OUTPUT_NAME_DEBUG "EternalDebug"
-        PDB_NAME_DEBUG "EternalDebug"
-        OUTPUT_NAME_NIGHTLY "EternalNightly"
-        PDB_NAME_NIGHTLY "EternalNightly"
+        OUTPUT_NAME_RELEASE "Enta"
+        PDB_NAME_RELEASE "Enta"
+        OUTPUT_NAME_RELWITHDEBINFO "Enta"
+        PDB_NAME_RELWITHDEBINFO "Enta"
+        OUTPUT_NAME_DEBUG "EntaDebug"
+        PDB_NAME_DEBUG "EntaDebug"
+        OUTPUT_NAME_NIGHTLY "EntaNightly"
+        PDB_NAME_NIGHTLY "EntaNightly"
 )
 
 # C++ standard

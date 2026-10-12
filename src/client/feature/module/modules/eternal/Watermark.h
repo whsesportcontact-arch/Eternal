@@ -1,7 +1,7 @@
 #pragma once
 #include "../../TextModule.h"
 
-// Eternal: shows the client name (and optionally version) on the HUD.
+// Enta: shows the client name (and optionally version) on the HUD.
 class Watermark : public TextModule {
 public:
     Watermark();
@@ -11,5 +11,5 @@ protected:
 
 private:
     ValueType showVersion = BoolValue(true);
-    ValueType customText = TextValue(L"Eternal Client");
+    ValueType customText = TextValue(L"Enta Client");
 };
