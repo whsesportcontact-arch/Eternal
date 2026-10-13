@@ -25,7 +25,8 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
   game has its own on/off toggle, grouped under Hostile, Neutral, Passive, Bosses, Projectiles, Vehicles and Items.
   Turns itself off with a chat message on Realms, servers, and any world with other players, and puts every
   hitbox back to normal. **Add-on Mobs**, **Extra Entity IDs** and **Player-Type NPCs** cover custom mobs from
-  add-ons (like a skygen world); real players are never affected.
+  add-ons (like a skygen world); real players are never affected. **Outlines** draw a box around every
+  expanded hitbox, with color, thickness, fill and see-through-walls options like Chest Outlines.
 - **Menus:** a steady dark backdrop instead of the live blur, which could flicker. The blur is opt-in in Settings.
 - **Removed:** Motion Blur.
 - All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Toggle Sprint, Minimap...)

@@ -16,6 +16,8 @@ public:
 
     void onTick(Event& ev);
     void onLeaveGame(Event& ev);
+    void onRender(Event& ev);
+    static void drawImpl(void* ctx);
     void onDisable() override;
 
     enum Group : uint8_t { Hostile, Neutral, Passive, Boss, Projectile, Vehicle, Drop, Unlisted, Never };
@@ -52,6 +54,14 @@ private:
     ValueType playerNpcs = BoolValue(false); // player-type entities that aren't real players (NPCs)
 
     ValueType include = TextValue(L"");
+
+    // outlines around expanded hitboxes, drawn like Chest Outlines
+    ValueType outline = BoolValue(true);
+    ValueType outlineColor = ColorValue(1.f, 0.3f, 0.3f, 1.f);
+    ValueType outlineThickness = FloatValue(2.f);
+    ValueType outlineFill = BoolValue(false);
+    ValueType outlineThroughWalls = BoolValue(false);
+    bool drawFailed = false;
 
     // One toggle per entity. Reserved up front and never resized: settings keep pointers into it.
     std::vector<ValueType> entityToggles;

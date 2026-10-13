@@ -2,6 +2,9 @@
 #include "HitboxExpand.h"
 #include "client/event/events/TickEvent.h"
 #include "client/event/events/LeaveGameEvent.h"
+#include "client/event/events/RenderLevelEvent.h"
+#include "mc/common/client/renderer/MaterialPtr.h"
+#include <util/DrawUtil3D.h>
 #include "mc/common/network/RemoteConnectorComposite.h"
 #include "client/Latite.h"
 #include "client/misc/ClientMessageQueue.h"
@@ -203,6 +206,15 @@ HitboxExpand::HitboxExpand()
     addSliderSetting("vertical", L"Extra Height", L"Blocks added to the top of the hitbox.", vertical,
                      FloatValue(0.f), FloatValue(3.f), FloatValue(0.25f));
 
+    addSetting("outline", L"Outlines", L"Draws an outline around every expanded hitbox.", outline);
+    addSetting("outlineColor", L"Outline Color", L"", outlineColor, "outline"_istrue);
+    addSliderSetting("outlineThickness", L"Outline Thickness", L"", outlineThickness, FloatValue(1.f),
+                     FloatValue(5.f), FloatValue(1.f), "outline"_istrue);
+    addSetting("outlineFill", L"Outline Fill", L"Also tint the sides of the box.", outlineFill, "outline"_istrue);
+    addSetting("outlineThroughWalls", L"Outlines Through Walls",
+               L"Show outlines through blocks. Like the rest of this module, only in your own solo world.",
+               outlineThroughWalls, "outline"_istrue);
+
     // Never resized after this, because each setting keeps a pointer to its toggle.
     entityToggles.reserve(std::size(kEntities));
 
@@ -250,6 +262,7 @@ HitboxExpand::HitboxExpand()
 
     listen<TickEvent>(static_cast<EventListenerFunc>(&HitboxExpand::onTick));
     listen<LeaveGameEvent>(static_cast<EventListenerFunc>(&HitboxExpand::onLeaveGame));
+    listen<RenderLevelEvent>(static_cast<EventListenerFunc>(&HitboxExpand::onRender));
 }
 
 std::string HitboxExpand::notSoloReason(SDK::Level* level) {
@@ -402,10 +415,101 @@ void HitboxExpand::onLeaveGame(Event&) {
 }
 
 void HitboxExpand::onDisable() {
+    drawFailed = false; // toggling the module retries the outlines after an error
     if (allowed) apply(false);
     allowed = false;
     checkedOnce = false;
     lastReason.clear();
     std::lock_guard guard(lock);
     expanded.clear();
+}
+
+namespace {
+    // Runs fn(ctx) and catches crashes (access violations) instead of letting them close the game.
+    bool guardedDraw(void (*fn)(void*), void* ctx) {
+        __try {
+            fn(ctx);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
+    }
+}
+
+struct HitboxExpandDraw {
+    MCDrawUtil3D* dc;
+    std::vector<AABB>* boxes;
+    d2d::Color color;
+    int layers;
+    bool fill;
+};
+
+void HitboxExpand::drawImpl(void* ctxPtr) {
+    auto& c = *static_cast<HitboxExpandDraw*>(ctxPtr);
+    for (auto& box : *c.boxes) {
+        Vec3 lo = box.lower, hi = box.higher;
+        for (int i = 0; i < c.layers; i++) {
+            float e = 0.003f + 0.004f * static_cast<float>(i);
+            c.dc->drawBox(AABB { Vec3 { lo.x - e, lo.y - e, lo.z - e }, Vec3 { hi.x + e, hi.y + e, hi.z + e } },
+                          c.color);
+        }
+        if (c.fill) {
+            d2d::Color fc = c.color.asAlpha(0.18f);
+            float e = 0.002f;
+            Vec3 a { lo.x - e, lo.y - e, lo.z - e }, b { hi.x + e, hi.y + e, hi.z + e };
+            c.dc->fillQuad({ a.x, b.y, a.z }, { b.x, b.y, a.z }, { b.x, b.y, b.z }, { a.x, b.y, b.z }, fc);
+            c.dc->fillQuad({ a.x, a.y, a.z }, { b.x, a.y, a.z }, { b.x, a.y, b.z }, { a.x, a.y, b.z }, fc);
+            c.dc->fillQuad({ a.x, a.y, a.z }, { a.x, b.y, a.z }, { b.x, b.y, a.z }, { b.x, a.y, a.z }, fc);
+            c.dc->fillQuad({ a.x, a.y, b.z }, { a.x, b.y, b.z }, { b.x, b.y, b.z }, { b.x, a.y, b.z }, fc);
+            c.dc->fillQuad({ a.x, a.y, a.z }, { a.x, b.y, a.z }, { a.x, b.y, b.z }, { a.x, a.y, b.z }, fc);
+            c.dc->fillQuad({ b.x, a.y, a.z }, { b.x, b.y, a.z }, { b.x, b.y, b.z }, { b.x, a.y, b.z }, fc);
+        }
+    }
+    c.dc->flush();
+}
+
+void HitboxExpand::onRender(Event& evG) {
+    if (drawFailed || !allowed || !std::get<BoolValue>(outline)) return;
+    auto& ev = reinterpret_cast<RenderLevelEvent&>(evG);
+
+    auto* ci = SDK::ClientInstance::get();
+    if (!ci || !ci->minecraft || !ci->getLocalPlayer()) return;
+    auto* level = ci->minecraft->getLevel();
+    if (!level) return;
+
+    const float alpha = ci->minecraft->timer ? ci->minecraft->timer->alpha : 1.f;
+
+    std::vector<AABB> boxes;
+    {
+        std::lock_guard guard(lock);
+        if (expanded.empty()) return;
+        boxes.reserve(expanded.size());
+        for (auto* actor : level->getRuntimeActorList()) {
+            if (!actor || !actor->aabbShape) continue;
+            if (!expanded.contains(actor->getRuntimeID())) continue;
+
+            // slide the box to where the mob is drawn this frame, so the outline doesn't lag behind it
+            AABB box = actor->getBoundingBox();
+            const Vec3 pos = actor->getPos(), old = actor->getPosOld();
+            const Vec3 shift { (old.x - pos.x) * (1.f - alpha), (old.y - pos.y) * (1.f - alpha),
+                               (old.z - pos.z) * (1.f - alpha) };
+            box.lower = box.lower + shift;
+            box.higher = box.higher + shift;
+            boxes.push_back(box);
+        }
+    }
+    if (boxes.empty()) return;
+
+    // Selection-box material is depth tested (hidden behind blocks); UI color draws on top of everything.
+    MCDrawUtil3D dc { ci->levelRenderer, ev.getScreenContext(),
+                      std::get<BoolValue>(outlineThroughWalls) ? SDK::MaterialPtr::getUIColor()
+                                                               : SDK::MaterialPtr::getSelectionBoxMaterial() };
+    HitboxExpandDraw ctx { &dc, &boxes, std::get<ColorValue>(outlineColor).getMainColor(),
+                           (std::max)(1, static_cast<int>(std::get<FloatValue>(outlineThickness))),
+                           std::get<BoolValue>(outlineFill) };
+    if (!guardedDraw(&HitboxExpand::drawImpl, &ctx)) {
+        drawFailed = true;
+        say("Hitbox Expand outlines couldn't draw on this game version and paused. Toggle the module off and on "
+            "to retry.");
+    }
 }
