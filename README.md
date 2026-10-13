@@ -8,7 +8,13 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
 ## What Enta changes
 - **Branding:** "Enta Client" everywhere, new logo, `Enta.dll` output, settings stored in `%APPDATA%\Enta`
 - **Theme:** near-black menu with a purple accent (#8B3DFF), purple outlines, scrollbar, snap lines and tooltips
-- **New modules:** Watermark, Module List (ArrayList), Session Timer, Memory Usage, Health Display
+- **New modules:** Watermark, Module List (ArrayList), Session Timer, Memory Usage, Health Display,
+  Totem Pop Counter, Enta Pack
+- **Totem Pop Counter:** shows `-1`, `-2`, ... next to a player's nametag every time they pop a totem, with
+  optional chat alerts. Resets when they die or you leave.
+- **Enta Pack:** builds a resource pack from your own game files with Low Fire (screen + ground), Low Shield,
+  Small Totem Pop, and fewer combat/ambient particles for FPS. Turn on "Enta Pack" once in
+  Settings > Global Resources > My Packs; after that, changing a setting rebuilds it (rejoin to apply).
 - All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Motion Blur, Toggle Sprint, Minimap...)
   and the JavaScript plugin system are still included
 
