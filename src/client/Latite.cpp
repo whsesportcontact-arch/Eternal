@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "client/feature/module/modules/eternal/LauncherBridge.h"
 // LatiteRecode.cpp : Defines the entry point for the application.
 //
 #include <cstdint>
@@ -602,6 +603,7 @@ void Latite::threadsafeInit() {
     Logger::Info("Loaded startup scripts");
 
     Latite::getConfigManager().applyModuleConfig();
+    LauncherBridge::onConfigApplied(); // mods switched on/off in the launcher
 
     Latite::getRenderer().setShouldInit();
 

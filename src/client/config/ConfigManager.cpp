@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "client/feature/module/modules/eternal/LauncherBridge.h"
 #include <algorithm>
 #include "ConfigManager.h"
 #include "client/Latite.h"
@@ -130,5 +131,6 @@ bool ConfigManager::save(std::shared_ptr<Config> cfg) {
     });
 
     auto res = cfg->save(groups);
+    LauncherBridge::writeManifest(); // keep the launcher's mod list in sync
     return res == std::nullopt;
 }

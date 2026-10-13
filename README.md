@@ -27,6 +27,17 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
 - All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Toggle Sprint, Minimap...)
   and the JavaScript plugin system are still included
 
+## Enta Launcher
+- **3D skin preview:** your skin spins in the launcher (drag to turn it). Enta saves your skin there every time
+  you play; you can also pick a skin file. Classic, slim and old 64x32 skins all work.
+- **Mods list:** switch modules on/off before starting the game. Your choices apply when Enta loads.
+- **Auto-updates:** the launcher checks GitHub on start and updates itself and Enta.dll.
+  - **Stable** gets builds from `main`.
+  - **Test builds** (switch in the bottom left) gets builds from any other branch, so you can try changes before
+    merging them.
+- Already have an old EntaLauncher.exe? Download the new one once from the Releases page; after that it
+  updates itself.
+
 ## Build (Windows)
 Requirements: Visual Studio 2026 (or Build Tools) with "Desktop development with C++" (MSVC x64, Windows SDK,
 CMake, Ninja), Git, MinGW-w64 (`bin` on PATH), and clang-format on PATH.

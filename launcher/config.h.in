@@ -1,2 +1,4 @@
 #pragma once
-#define ENTA_DLL_URL L"@ENTA_DLL_URL@"
+// filled in by CMake (the GitHub workflow passes these); empty for local builds = no auto-updates
+#define ENTA_REPO L"@ENTA_REPO@"
+#define ENTA_BUILD_ID L"@ENTA_BUILD_ID@"

@@ -70,6 +70,7 @@
 #include "modules/eternal/PerformanceMode.h"
 #include "modules/eternal/LagCheck.h"
 #include "modules/eternal/MobHitboxExpand.h"
+#include "modules/eternal/LauncherBridge.h"
 
 #include "client/event/events/KeyUpdateEvent.h"
 
@@ -142,6 +143,7 @@ ModuleManager::ModuleManager() {
     this->items.push_back(std::make_shared<PerformanceMode>());
     this->items.push_back(std::make_shared<LagCheck>());
     this->items.push_back(std::make_shared<MobHitboxExpand>());
+    this->items.push_back(std::make_shared<LauncherBridge>());
 
     for (auto& mod : items) {
         mod->onInit();
