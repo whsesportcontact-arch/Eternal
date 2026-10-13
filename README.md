@@ -12,7 +12,8 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
   Totem Pop Counter, Enta Pack
 - **Totem Pop Counter:** shows `-1`, `-2`, ... next to a player's nametag every time they pop a totem, with
   optional chat alerts. Resets when they die or you leave.
-- **Enta Pack:** builds a resource pack from your own game files with Low Fire (screen + ground), Low Shield,
+- **Enta Pack:** builds a resource pack from your own game files with Low Fire (screen fire and ground fire,
+  set separately; ground fire defaults to slab height), Low Shield,
   Small Totem Pop, and fewer combat/ambient particles for FPS. Turn on "Enta Pack" once in
   Settings > Global Resources > My Packs; after that, changing a setting rebuilds it (rejoin to apply).
 - **Performance Mode:** one switch (bind it to a key) that turns off the heaviest modules, and optionally your HUD,

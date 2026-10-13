@@ -107,6 +107,7 @@ struct SkinEntry {
     std::wstring path;
     std::wstring label;
     bool fromGame = false;
+    bool isDefault = false; // Steve
 };
 std::vector<SkinEntry> gSkins;
 std::wstring gSelectedSkin; // path; remembered in launcher.ini
@@ -595,10 +596,28 @@ SkinEntry const* selectedEntry() {
     return gSkins.empty() ? nullptr : &gSkins.front();
 }
 
+// Steve, taken from your own Minecraft install (Enta copies it here when it loads; before that we look in
+// the usual install folder on each drive).
+std::wstring defaultSkinPath() {
+    static bool searched = false;
+    const std::wstring path = dataDir() + L"\\default_skin.png";
+    if (fileExists(path) || searched) return fileExists(path) ? path : L"";
+    searched = true;
+    for (wchar_t d = L'C'; d <= L'Z'; d++) {
+        std::wstring steve = std::wstring(1, d) +
+                             L":\\XboxGames\\Minecraft for Windows\\Content\\data\\resource_packs\\vanilla\\textures\\entity\\steve.png";
+        if (fileExists(steve) && CopyFileW(steve.c_str(), path.c_str(), TRUE)) return path;
+    }
+    return L"";
+}
+
 void refreshSkinList() {
     gPendingSkin = readPathFile(pendingSkinFile());
     gAppliedSkin = readPathFile(appliedSkinFile());
     std::vector<SkinEntry> list;
+    // Steve first, so he's what you see until you pick a skin
+    std::wstring steve = defaultSkinPath();
+    if (!steve.empty()) list.push_back({ steve, L"Steve (default)", false, true });
     if (fileExists(gameSkinPath())) list.push_back({ gameSkinPath(), L"Your in-game skin", true });
 
     std::vector<SkinEntry> added;
@@ -608,7 +627,7 @@ void refreshSkinList() {
         do {
             if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
             std::wstring name = fd.cFileName;
-            added.push_back({ skinsDir() + L"\\" + name, name.substr(0, name.size() - 4), false });
+            added.push_back({ skinsDir() + L"\\" + name, name.substr(0, name.size() - 4), false, false });
         } while (FindNextFileW(find, &fd));
         FindClose(find);
     }
@@ -687,7 +706,7 @@ void addSkin() {
 
 void removeSkin() {
     SkinEntry const* e = selectedEntry();
-    if (!e || e->fromGame) return;
+    if (!e || e->fromGame || e->isDefault) return;
     std::wstring path = e->path;
     if (_wcsicmp(pendingSkin().c_str(), path.c_str()) == 0) DeleteFileW(pendingSkinFile().c_str());
     DeleteFileW(path.c_str());
@@ -699,7 +718,7 @@ void removeSkin() {
 // Tell Enta to answer the game's "Choose New Skin" picker with this file.
 void useSkinInGame() {
     SkinEntry const* e = selectedEntry();
-    if (!e || e->fromGame) return;
+    if (!e || e->fromGame || e->isDefault) return;
     grantAppContainerRead(skinsDir());
     grantAppContainerRead(e->path);
     DeleteFileW(appliedSkinFile().c_str());
@@ -900,7 +919,7 @@ void paintSkinControls(HDC dc) {
     }
     if (e) {
         text(dc, e->label, kSkinName, gBodyFont, kText, DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        if (!e->fromGame)
+        if (!e->fromGame && !e->isDefault)
             text(dc, L"Remove", kRemoveSkin, gSmallFont, gHoverSkin == SB_Remove ? kPurpleHot : kSubText,
                  DT_RIGHT | DT_SINGLELINE);
     }
@@ -908,7 +927,9 @@ void paintSkinControls(HDC dc) {
     // where this skin stands
     std::wstring note;
     COLORREF noteColor = kSubText;
-    if (e && !e->fromGame) {
+    if (e && e->isDefault) {
+        note = L"Add a skin to wear something else";
+    } else if (e && !e->fromGame) {
         if (_wcsicmp(pendingSkin().c_str(), e->path.c_str()) == 0) {
             note = L"Ready: press Choose New Skin in game";
             noteColor = kWarn;
@@ -925,11 +946,11 @@ void paintSkinControls(HDC dc) {
     // buttons
     fillRound(dc, kAddSkin, 12, gHoverSkin == SB_Add ? kPanelHover : kPanel, kPurpleDim);
     text(dc, L"Add skin", kAddSkin, gBodyFont, kText, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-    const bool canUse = e && !e->fromGame;
+    const bool canUse = e && !e->fromGame && !e->isDefault;
     fillRound(dc, kUseSkin, 12, !canUse ? kPurpleDim : (gHoverSkin == SB_Use ? kPurpleHot : kPurple),
               canUse ? kPurple : kPurpleDim);
-    text(dc, canUse ? L"Use in game" : L"Wearing this", kUseSkin, gBodyFont, canUse ? kText : kSubText,
-         DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    text(dc, canUse ? L"Use in game" : (e && e->isDefault ? L"Default skin" : L"Wearing this"), kUseSkin, gBodyFont,
+         canUse ? kText : kSubText, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 }
 
 void paint(HWND hwnd) {

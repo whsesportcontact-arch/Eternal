@@ -5,6 +5,12 @@
 #include "client/misc/ClientMessageQueue.h"
 #include "mc/common/network/packet/ActorEventPacket.h"
 #include "mc/common/world/actor/player/Player.h"
+#include "client/event/events/RenderLayerEvent.h"
+#include "mc/common/client/game/FontRepository.h"
+#include "mc/common/client/gui/controls/UIControl.h"
+#include "mc/common/client/gui/controls/VisualTree.h"
+#include "util/DrawContext.h"
+#include "util/WorldToScreen.h"
 
 namespace {
     // UTF-8 section sign, used for Minecraft color codes
@@ -28,15 +34,18 @@ TotemPopCounter::TotemPopCounter()
 
     addEnumSetting("style", L"Counter Style", L"How the pop count looks next to the name.", style);
     addEnumSetting("color", L"Counter Color", L"Color of the pop count.", color);
-    addSetting("chatAlerts", L"Chat Alerts", L"Say in chat when someone pops a totem.", chatAlerts);
+    addSetting("aboveHead", L"Show Above Head", L"Floats the count above each player's head.", aboveHead);
+    addSetting("onNametag", L"Add To Nametag", L"Also adds the count to the end of the player's nametag.", onNametag);
+    addSetting("popChatAlerts", L"Chat Alerts", L"Also say in chat when someone pops a totem.", chatAlerts);
     addSetting("countSelf", L"Count Your Own Pops", L"Also tell you in chat when you pop a totem.", countSelf,
-               "chatAlerts"_istrue);
+               "popChatAlerts"_istrue);
     addSetting("resetOnDeath", L"Reset On Death", L"Reset a player's count when they die.", resetOnDeath);
 
     listen<PacketReceiveEvent>(static_cast<EventListenerFunc>(&TotemPopCounter::onPacketReceive));
     listen<RenderNameTagEvent>(static_cast<EventListenerFunc>(&TotemPopCounter::onRenderNameTag));
     listen<TickEvent>(static_cast<EventListenerFunc>(&TotemPopCounter::onTick));
     listen<LeaveGameEvent>(static_cast<EventListenerFunc>(&TotemPopCounter::onLeaveGame));
+    listen<RenderLayerEvent>(static_cast<EventListenerFunc>(&TotemPopCounter::onRenderLayer));
 }
 
 std::string TotemPopCounter::stripFormatting(std::string const& s) {
@@ -74,6 +83,17 @@ std::string TotemPopCounter::colorCode() const {
     int idx = color.getSelectedKey();
     if (idx < 0 || idx >= static_cast<int>(sizeof(codes))) idx = 0;
     return std::string(kSect) + codes[idx];
+}
+
+d2d::Color TotemPopCounter::drawColor() const {
+    switch (color.getSelectedKey()) {
+    case 1: return { 1.f, 0.67f, 0.f };     // gold
+    case 2: return { 0.8f, 0.45f, 1.f };    // purple
+    case 3: return { 1.f, 1.f, 0.33f };     // yellow
+    case 4: return { 0.33f, 1.f, 1.f };     // aqua
+    case 5: return { 1.f, 1.f, 1.f };       // white
+    default: return { 1.f, 0.33f, 0.33f }; // red
+    }
 }
 
 std::string TotemPopCounter::formatCount(int pops) const {
@@ -151,6 +171,7 @@ void TotemPopCounter::onPacketReceive(Event& evG) {
 }
 
 void TotemPopCounter::onRenderNameTag(Event& evG) {
+    if (!std::get<BoolValue>(onNametag)) return;
     auto& ev = reinterpret_cast<RenderNameTagEvent&>(evG);
     std::string* tag = ev.getNametag();
     if (!tag || tag->empty()) return;
@@ -214,6 +235,57 @@ void TotemPopCounter::onTick(Event& evG) {
     // nametags can change (rank updates, team colors), so re-read them about once a second
     if (++tickCounter % 20 != 0) return;
     refreshNames(ev.getLevel());
+}
+
+// Draw the count floating above each player's head (on the HUD layer, so it's always readable).
+void TotemPopCounter::onRenderLayer(Event& evG) {
+    if (!std::get<BoolValue>(aboveHead)) return;
+    auto& ev = reinterpret_cast<RenderLayerEvent&>(evG);
+    auto* view = ev.getScreenView();
+    if (!view || !view->visualTree || !view->visualTree->rootControl ||
+        view->visualTree->rootControl->name != "hud_screen")
+        return;
+
+    auto* ci = SDK::ClientInstance::get();
+    auto* local = ci ? ci->getLocalPlayer() : nullptr;
+    auto* level = (ci && ci->minecraft) ? ci->minecraft->getLevel() : nullptr;
+    if (!local || !level) return;
+
+    std::unordered_map<uint64_t, int> pops;
+    {
+        std::lock_guard guard(lock);
+        for (auto& [id, entry] : entries)
+            if (entry.pops > 0) pops[id] = entry.pops;
+    }
+    if (pops.empty()) return;
+
+    MCDrawUtil dc { ev.getUIRenderContext(), ci->minecraftGame->getFontRepository()->getMinecraftFont() };
+    const Vec3 me = local->getPos();
+    const d2d::Color col = drawColor();
+    bool drew = false;
+
+    for (auto* actor : level->getRuntimeActorList()) {
+        if (!actor || !actor->isPlayer() || actor == local) continue;
+        auto it = pops.find(actor->getRuntimeID());
+        if (it == pops.end()) continue;
+
+        // just above the nametag
+        AABB box = actor->getBoundingBox();
+        const Vec3 head((box.lower.x + box.higher.x) * 0.5f, box.higher.y + 0.95f, (box.lower.z + box.higher.z) * 0.5f);
+        auto screen = WorldToScreen::convert(head);
+        if (!screen) continue;
+
+        const float dx = head.x - me.x, dy = head.y - me.y, dz = head.z - me.z;
+        const float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+        const float size = std::clamp(320.f / std::max(dist, 1.f), 14.f, 36.f); // smaller when far away
+
+        const std::wstring text = util::StrToWStr(formatCount(it->second));
+        d2d::Rect rect(screen->x - 150.f, screen->y - size, screen->x + 150.f, screen->y);
+        dc.drawText(rect, text, col, Renderer::FontSelection::PrimaryRegular, size, DWRITE_TEXT_ALIGNMENT_CENTER,
+                    DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
+        drew = true;
+    }
+    if (drew) dc.flush();
 }
 
 void TotemPopCounter::onLeaveGame(Event&) {

@@ -138,9 +138,26 @@ void LauncherBridge::writeManifest() {
     writeAtomically(folder() / "modules.tsv", out);
 }
 
+// Steve from your own game files, as the launcher's default preview (so no Mojang art ships with Enta).
+static void exportDefaultSkin(fs::path const& launcherFolder) {
+    std::error_code ec;
+    const fs::path dest = launcherFolder / "default_skin.png";
+    if (fs::exists(dest, ec)) return;
+
+    std::vector<wchar_t> buf(32768);
+    DWORD len = GetModuleFileNameW(nullptr, buf.data(), static_cast<DWORD>(buf.size()));
+    if (len == 0) return;
+    const fs::path steve = fs::path(std::wstring(buf.data(), len)).parent_path() / "data" / "resource_packs" /
+                           "vanilla" / "textures" / "entity" / "steve.png";
+    if (!fs::is_regular_file(steve, ec)) return;
+    fs::create_directories(launcherFolder, ec);
+    fs::copy_file(steve, dest, fs::copy_options::skip_existing, ec);
+}
+
 void LauncherBridge::onConfigApplied() {
     if (applyOverrides()) Latite::getConfigManager().saveCurrentConfig(); // also rewrites the manifest
     writeManifest();
+    exportDefaultSkin(folder());
 }
 
 void LauncherBridge::exportSkin(SDK::Level* level) {

@@ -22,7 +22,8 @@ public:
     struct Options {
         bool active = true;
         bool lowFire = true;
-        float fireHeight = 50.f;
+        float screenFireHeight = 30.f;
+        float groundFireHeight = 50.f;
         bool lowShield = true;
         float shieldOffset = 3.f;
         bool smallTotem = true;
@@ -41,7 +42,8 @@ private:
     static void openPackFolder();
 
     ValueType lowFire = BoolValue(true);
-    ValueType fireHeight = FloatValue(50.f);
+    ValueType screenFireHeight = FloatValue(30.f);
+    ValueType groundFireHeight = FloatValue(50.f);
     ValueType lowShield = BoolValue(true);
     ValueType shieldOffset = FloatValue(3.f);
     ValueType smallTotem = BoolValue(true);

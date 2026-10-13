@@ -46,7 +46,6 @@ MobHitboxExpand::MobHitboxExpand()
     }
 
     listen<TickEvent>(static_cast<EventListenerFunc>(&MobHitboxExpand::onTick));
-    listen<UpdateEvent>(static_cast<EventListenerFunc>(&MobHitboxExpand::onUpdate));
     listen<LeaveGameEvent>(static_cast<EventListenerFunc>(&MobHitboxExpand::onLeaveGame));
 }
 
@@ -71,8 +70,10 @@ bool MobHitboxExpand::isSelected(uint32_t entityTypeId) {
     return false;
 }
 
-// expand = true: grow selected mobs. expand = false: put every box we touched back to normal.
-// Boxes are rebuilt from the mob's real size each time, so this never stacks.
+// expand = true: grow selected mobs. expand = false: put every mob we touched back to normal.
+//
+// We change the mob's stored size (the AABB shape's width/height), not just its box: the game rebuilds the box
+// from that size every time the mob moves, so the bigger box stays put instead of flickering back each frame.
 void MobHitboxExpand::apply(bool expand) {
     auto* ci = SDK::ClientInstance::get();
     if (!ci || !ci->minecraft) return;
@@ -83,32 +84,44 @@ void MobHitboxExpand::apply(bool expand) {
     const float ew = expand ? std::get<FloatValue>(extraWidth).value : 0.f;
     const float eh = expand ? std::get<FloatValue>(extraHeight).value : 0.f;
 
-    std::unordered_set<uint64_t> stillExpanded;
+    auto same = [](Vec2 a, Vec2 b) { return std::fabs(a.x - b.x) < 0.001f && std::fabs(a.y - b.y) < 0.001f; };
+
+    // rebuild the box for a new size right away: same center, same bottom
+    auto setSize = [](SDK::AABBShapeComponent* shape, Vec2 size) {
+        AABB& box = shape->boundingBox;
+        const float cx = (box.lower.x + box.higher.x) * 0.5f;
+        const float cz = (box.lower.z + box.higher.z) * 0.5f;
+        const float bottom = box.lower.y;
+        shape->size = size;
+        box = AABB(Vec3(cx - size.x * 0.5f, bottom, cz - size.x * 0.5f),
+                   Vec3(cx + size.x * 0.5f, bottom + size.y, cz + size.x * 0.5f));
+    };
+
+    std::unordered_map<uint64_t, Tracked> next;
     for (auto* actor : level->getRuntimeActorList()) {
         if (!actor || actor->isPlayer() || !actor->aabbShape) continue;
 
         const uint64_t id = actor->getRuntimeID();
-        const bool touched = expanded.contains(id);
+        auto it = expanded.find(id);
+        const bool touched = it != expanded.end();
         const bool wanted = expand && isSelected(actor->getEntityTypeID());
         if (!wanted && !touched) continue;
 
         auto* shape = actor->aabbShape;
-        const float w = shape->size.x;
-        const float h = shape->size.y;
-        if (w <= 0.f || h <= 0.f) continue;
+        const Vec2 current = shape->size;
+        if (current.x <= 0.f || current.y <= 0.f) continue;
 
-        AABB& box = shape->boundingBox;
-        // width grows evenly, height only grows upward, so the center x/z and the bottom stay put
-        const float cx = (box.lower.x + box.higher.x) * 0.5f;
-        const float cz = (box.lower.z + box.higher.z) * 0.5f;
-        const float bottom = box.lower.y;
-        const float half = w * 0.5f + (wanted ? ew : 0.f);
-        const float top = bottom + h + (wanted ? eh : 0.f);
-
-        box = AABB(Vec3(cx - half, bottom, cz - half), Vec3(cx + half, top, cz + half));
-        if (wanted) stillExpanded.insert(id);
+        if (wanted) {
+            // if the size isn't the one we set, the game changed it (spawned, grew up...): that's the new normal
+            const Vec2 original = (touched && same(current, it->second.applied)) ? it->second.original : current;
+            const Vec2 grown(original.x + ew * 2.f, original.y + eh);
+            if (!same(current, grown)) setSize(shape, grown);
+            next[id] = { original, grown };
+        } else if (same(current, it->second.applied)) {
+            setSize(shape, it->second.original); // put it back
+        }
     }
-    expanded = std::move(stillExpanded);
+    expanded = std::move(next);
 }
 
 void MobHitboxExpand::onTick(Event& evG) {
@@ -131,11 +144,6 @@ void MobHitboxExpand::onTick(Event& evG) {
         lastReason = reason;
     }
 
-    if (allowed) apply(true);
-}
-
-// the game resets a mob's box when it moves, so put ours back every frame too
-void MobHitboxExpand::onUpdate(Event&) {
     if (allowed) apply(true);
 }
 

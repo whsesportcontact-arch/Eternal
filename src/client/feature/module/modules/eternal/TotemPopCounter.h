@@ -1,5 +1,6 @@
 #pragma once
 #include "../../Module.h"
+#include "util/DxUtil.h"
 #include <unordered_map>
 #include <mutex>
 
@@ -14,6 +15,7 @@ public:
     void onRenderNameTag(Event& ev);
     void onTick(Event& ev);
     void onLeaveGame(Event& ev);
+    void onRenderLayer(Event& ev);
     void onDisable() override;
 
 private:
@@ -27,11 +29,14 @@ private:
     static bool containsName(std::string const& haystack, std::string const& name);
     std::string formatCount(int pops) const;
     std::string colorCode() const;
+    d2d::Color drawColor() const;
     void refreshNames(SDK::Level* level);
 
     EnumData style;
     EnumData color;
-    ValueType chatAlerts = BoolValue(true);
+    ValueType aboveHead = BoolValue(true);
+    ValueType onNametag = BoolValue(false);
+    ValueType chatAlerts = BoolValue(false);
     ValueType countSelf = BoolValue(true);
     ValueType resetOnDeath = BoolValue(true);
 

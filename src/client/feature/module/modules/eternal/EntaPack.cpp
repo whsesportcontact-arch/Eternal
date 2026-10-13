@@ -17,12 +17,15 @@ namespace {
     constexpr const char* kPackFolder = "EntaPack";
     constexpr const char* kSignatureFile = "enta_pack_settings.txt";
     // bump this when the generator changes, so old packs get rebuilt
-    constexpr const char* kGeneratorVersion = "1";
+    constexpr const char* kGeneratorVersion = "2";
 
     constexpr const char* kHeaderUuid = "cb8b5819-6579-4acf-bb20-8c2509e36c52";
     constexpr const char* kModuleUuid = "ecf7a02c-0d5b-47f2-9f5a-5a1f2c157e52";
 
-    // fire overlay + ground fire share these textures (32-frame flipbooks)
+    // the fire on your screen (and on burning mobs) uses its own 32-frame flipbook
+    constexpr const char* kScreenFireTexture = "textures/flame_atlas.png";
+
+    // fire on the ground (32-frame flipbooks)
     constexpr std::array kFireTextures = {
         "textures/blocks/fire_0.png",
         "textures/blocks/fire_1.png",
@@ -370,8 +373,9 @@ namespace {
 }
 
 std::string EntaPack::Options::signature() const {
-    return std::format("v{}|{}|{}:{:.0f}|{}:{:.1f}|{}:{:.0f}|{:.0f}|{:.0f}", kGeneratorVersion, active, lowFire,
-                       fireHeight, lowShield, shieldOffset, smallTotem, totemSize, combatParticles, ambientParticles);
+    return std::format("v{}|{}|{}:{:.0f}:{:.0f}|{}:{:.1f}|{}:{:.0f}|{:.0f}|{:.0f}", kGeneratorVersion, active, lowFire,
+                       screenFireHeight, groundFireHeight, lowShield, shieldOffset, smallTotem, totemSize,
+                       combatParticles, ambientParticles);
 }
 
 EntaPack::EntaPack()
@@ -381,10 +385,16 @@ EntaPack::EntaPack()
              GAME, nokeybind) {
     auto onChange = [this](Setting&) { markDirty(); };
 
-    addSetting("lowFire", L"Low Fire", L"Makes fire shorter, both on your screen and on the ground.", lowFire)
+    addSetting("lowFire", L"Low Fire", L"Makes fire shorter, on your screen and on the ground.", lowFire)
         ->userUpdateCallback = onChange;
-    addSliderSetting("fireHeight", L"Fire Height", L"How tall fire is, in percent of normal.", fireHeight,
-                     FloatValue(20.f), FloatValue(90.f), FloatValue(5.f), "lowFire"_istrue)
+    addSliderSetting("screenFireHeight", L"Screen Fire Height",
+                     L"How tall the fire on your screen is when you're burning, in percent of normal. "
+                     L"Also changes the fire on burning mobs and players.",
+                     screenFireHeight, FloatValue(10.f), FloatValue(90.f), FloatValue(5.f), "lowFire"_istrue)
+        ->userUpdateCallback = onChange;
+    addSliderSetting("groundFireHeight", L"Ground Fire Height",
+                     L"How tall fire blocks are, in percent of a full block. 50 is the height of a slab.",
+                     groundFireHeight, FloatValue(10.f), FloatValue(90.f), FloatValue(5.f), "lowFire"_istrue)
         ->userUpdateCallback = onChange;
 
     addSetting("lowShield", L"Low Shield", L"Moves your shield lower in first person so it blocks less of your view.",
@@ -430,7 +440,8 @@ EntaPack::Options EntaPack::snapshot(bool active) {
     Options o;
     o.active = active;
     o.lowFire = std::get<BoolValue>(lowFire);
-    o.fireHeight = std::get<FloatValue>(fireHeight);
+    o.screenFireHeight = std::get<FloatValue>(screenFireHeight);
+    o.groundFireHeight = std::get<FloatValue>(groundFireHeight);
     o.lowShield = std::get<BoolValue>(lowShield);
     o.shieldOffset = std::get<FloatValue>(shieldOffset);
     o.smallTotem = std::get<BoolValue>(smallTotem);
@@ -550,9 +561,11 @@ void EntaPack::build(Options opts, bool force) {
                 problems.push_back("couldn't save " + rel);
         };
 
-        if (opts.lowFire && opts.fireHeight < 100.f) {
-            const float k = opts.fireHeight / 100.f;
-            for (auto* rel : kFireTextures) texture(rel, [k](PackImage& img) { return squashFrames(img, k); });
+        if (opts.lowFire) {
+            const float ground = opts.groundFireHeight / 100.f;
+            for (auto* rel : kFireTextures) texture(rel, [ground](PackImage& img) { return squashFrames(img, ground); });
+            const float screen = opts.screenFireHeight / 100.f;
+            texture(kScreenFireTexture, [screen](PackImage& img) { return squashFrames(img, screen); });
         }
 
         if (opts.smallTotem && opts.totemSize < 100.f) {

@@ -1,7 +1,7 @@
 #pragma once
 #include "../../Module.h"
 #include <mutex>
-#include <unordered_set>
+#include <unordered_map>
 
 // Enta (experimental): makes chosen mobs' hitboxes bigger on your screen so you can hit them over
 // blocks, for farms in your OWN singleplayer world. It shuts itself off on Realms, servers, and any
@@ -11,7 +11,6 @@ public:
     MobHitboxExpand();
 
     void onTick(Event& ev);
-    void onUpdate(Event& ev);
     void onLeaveGame(Event& ev);
     void onDisable() override;
 
@@ -36,6 +35,10 @@ private:
     bool checkedOnce = false;
     std::string lastReason;
     int tickCounter = 0;
-    std::unordered_set<uint64_t> expanded; // runtime ids we changed
+    struct Tracked {
+        Vec2 original; // the mob's real size
+        Vec2 applied;  // the size we gave it
+    };
+    std::unordered_map<uint64_t, Tracked> expanded; // runtime ids we changed
     std::mutex lock;
 };
