@@ -20,6 +20,9 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
 - **Lag Check:** HUD readout with FPS, ping and whether the server/Realm has stopped responding, plus a
   "Lag:" line saying if it's your PC, your connection, or the server. "Show Module Costs" lists which Enta
   modules use the most time per frame.
+- **Mob Hitbox Expand (Singleplayer, experimental):** makes the mobs you pick (Wither Skeleton by default) easier
+  to hit over blocks, for farms in your own world. Turns itself off with a chat message on Realms, servers, and any
+  world with other players, and puts every hitbox back to normal.
 - **Removed:** Motion Blur.
 - All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Toggle Sprint, Minimap...)
   and the JavaScript plugin system are still included
