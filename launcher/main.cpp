@@ -60,8 +60,14 @@ constexpr int kW = 780, kH = 488;
 const RECT kClose = { kW - 42, 14, kW - 14, 42 };
 const RECT kMin = { kW - 76, 14, kW - 48, 42 };
 const RECT kSkinPanel = { 20, 100, 282, 384 };
-const RECT kViewer = { 31, 128, 271, 352 };
-const RECT kChooseSkin = { 31, 356, 271, 378 };
+const RECT kViewer = { 31, 128, 271, 298 };
+const RECT kPrev = { 31, 302, 55, 326 };
+const RECT kNext = { 247, 302, 271, 326 };
+const RECT kSkinName = { 57, 300, 245, 318 };
+const RECT kSkinNote = { 31, 318, 271, 336 };
+const RECT kAddSkin = { 31, 342, 117, 374 };
+const RECT kUseSkin = { 123, 342, 271, 374 };
+const RECT kRemoveSkin = { 196, 106, 270, 126 };
 const RECT kModsPanel = { 298, 100, 760, 384 };
 const RECT kList = { 306, 160, 752, 378 };
 const RECT kLaunch = { 470, 400, 760, 452 };
@@ -87,14 +93,25 @@ bool gUpdateWarn = false;
 std::atomic_bool gBusy = false;         // launching
 std::atomic_bool gUpdating = false;     // update check running
 std::atomic_bool gGameHasEnta = false;  // Minecraft running with Enta loaded
-bool gHoverLaunch = false, gHoverClose = false, gHoverMin = false, gHoverChoose = false, gHoverChannel = false;
+bool gHoverLaunch = false, gHoverClose = false, gHoverMin = false, gHoverChannel = false;
+enum SkinButton { SB_None, SB_Prev, SB_Next, SB_Add, SB_Use, SB_Remove };
+int gHoverSkin = SB_None;
 int gHoverRow = -1;
 
 std::atomic_bool gDevChannel = false;
 bool gJustUpdated = false; // started by a self-update: don't try again this run
 
 // skin viewer
-skin::Image gSkin;
+// skin library: the skin you have in game (exported by Enta) + skins you added here
+struct SkinEntry {
+    std::wstring path;
+    std::wstring label;
+    bool fromGame = false;
+};
+std::vector<SkinEntry> gSkins;
+std::wstring gSelectedSkin; // path; remembered in launcher.ini
+skin::Image gSkin;          // the selected one, decoded
+std::wstring gLoadedSkinPath;
 FILETIME gSkinTime {};
 float gYaw = 25.f;
 bool gDragging = false;
@@ -225,11 +242,13 @@ void loadSettings() {
         line = trim(line);
         if (line == "channel=dev") gDevChannel = true;
         if (line == "channel=stable") gDevChannel = false;
+        if (line.rfind("skin=", 0) == 0) gSelectedSkin = widen(line.substr(5));
     }
 }
 
 void saveSettings() {
-    writeFile(settingsPath(), std::string("channel=") + (gDevChannel.load() ? "dev" : "stable") + "\n");
+    writeFile(settingsPath(), std::string("channel=") + (gDevChannel.load() ? "dev" : "stable") + "\nskin=" +
+                                  narrow(gSelectedSkin) + "\n");
 }
 
 // ------------------------------------------------------------------------------------------------ game + injection
@@ -547,23 +566,94 @@ bool loadPng(std::wstring const& path, skin::Image& out) {
     return ok;
 }
 
-std::wstring skinPath() { return dataDir() + L"\\skin.png"; }
+std::wstring gameSkinPath() { return dataDir() + L"\\skin.png"; }
+std::wstring pendingSkinFile() { return dataDir() + L"\\pending_skin.txt"; }
+std::wstring appliedSkinFile() { return dataDir() + L"\\skin_applied.txt"; }
 
+std::wstring skinsDir() {
+    std::wstring d = dataDir() + L"\\skins";
+    CreateDirectoryW(d.c_str(), nullptr);
+    return d;
+}
+
+// first line of a small UTF-8 text file
+std::wstring readPathFile(std::wstring const& file) {
+    std::string t;
+    if (!readFile(file, t)) return {};
+    auto nl = t.find('\n');
+    return widen(trim(nl == std::string::npos ? t : t.substr(0, nl)));
+}
+
+// cached; refreshed with the skin list (every couple of seconds) and after changes here
+std::wstring gPendingSkin, gAppliedSkin;
+std::wstring pendingSkin() { return gPendingSkin; }
+std::wstring appliedSkin() { return gAppliedSkin; }
+
+SkinEntry const* selectedEntry() {
+    for (auto& e : gSkins)
+        if (_wcsicmp(e.path.c_str(), gSelectedSkin.c_str()) == 0) return &e;
+    return gSkins.empty() ? nullptr : &gSkins.front();
+}
+
+void refreshSkinList() {
+    gPendingSkin = readPathFile(pendingSkinFile());
+    gAppliedSkin = readPathFile(appliedSkinFile());
+    std::vector<SkinEntry> list;
+    if (fileExists(gameSkinPath())) list.push_back({ gameSkinPath(), L"Your in-game skin", true });
+
+    std::vector<SkinEntry> added;
+    WIN32_FIND_DATAW fd;
+    HANDLE find = FindFirstFileW((skinsDir() + L"\\*.png").c_str(), &fd);
+    if (find != INVALID_HANDLE_VALUE) {
+        do {
+            if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+            std::wstring name = fd.cFileName;
+            added.push_back({ skinsDir() + L"\\" + name, name.substr(0, name.size() - 4), false });
+        } while (FindNextFileW(find, &fd));
+        FindClose(find);
+    }
+    std::sort(added.begin(), added.end(), [](SkinEntry const& a, SkinEntry const& b) {
+        return _wcsicmp(a.label.c_str(), b.label.c_str()) < 0;
+    });
+    list.insert(list.end(), added.begin(), added.end());
+    gSkins = std::move(list);
+}
+
+// decode the selected skin again if it changed (or the game exported a new one)
 void reloadSkinIfChanged() {
-    FILETIME ft {};
-    if (!fileTime(skinPath(), ft)) {
+    refreshSkinList();
+    SkinEntry const* e = selectedEntry();
+    if (!e) {
         gSkin = {};
+        gLoadedSkinPath.clear();
         return;
     }
-    if (sameTime(ft, gSkinTime) && gSkin.valid()) return;
+    FILETIME ft {};
+    if (!fileTime(e->path, ft)) return;
+    if (e->path == gLoadedSkinPath && sameTime(ft, gSkinTime) && gSkin.valid()) return;
     skin::Image img;
-    if (loadPng(skinPath(), img)) {
+    if (loadPng(e->path, img)) {
         gSkin = img;
         gSkinTime = ft;
+        gLoadedSkinPath = e->path;
     }
 }
 
-void chooseSkin() {
+void selectSkin(std::wstring const& path) {
+    gSelectedSkin = path;
+    saveSettings();
+    reloadSkinIfChanged();
+}
+
+void stepSkin(int dir) {
+    if (gSkins.empty()) return;
+    int idx = 0;
+    if (auto* e = selectedEntry()) idx = static_cast<int>(e - gSkins.data());
+    idx = (idx + dir + static_cast<int>(gSkins.size())) % static_cast<int>(gSkins.size());
+    selectSkin(gSkins[idx].path);
+}
+
+void addSkin() {
     wchar_t file[MAX_PATH] {};
     OPENFILENAMEW ofn {};
     ofn.lStructSize = sizeof(ofn);
@@ -571,19 +661,55 @@ void chooseSkin() {
     ofn.lpstrFilter = L"Minecraft skin (*.png)\0*.png\0";
     ofn.lpstrFile = file;
     ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrTitle = L"Choose a skin to preview";
+    ofn.lpstrTitle = L"Add a skin";
     ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
     if (!GetOpenFileNameW(&ofn)) return;
 
     skin::Image img;
     if (!loadPng(file, img) || !skin::isSupported(img)) {
-        setStatus(L"That file isn't a normal Minecraft skin (64x64, 64x32 or 128x128).");
+        setStatus(L"That isn't a normal Minecraft skin (64x64, 64x32 or 128x128).");
         return;
     }
-    CopyFileW(file, skinPath().c_str(), FALSE);
-    gSkinTime = {};
+
+    // copy it into the library under a free name
+    std::wstring src = file;
+    std::wstring base = src.substr(src.find_last_of(L"\\/") + 1);
+    if (base.size() > 4 && _wcsicmp(base.c_str() + base.size() - 4, L".png") == 0) base.resize(base.size() - 4);
+    std::wstring dest = skinsDir() + L"\\" + base + L".png";
+    for (int n = 2; fileExists(dest) && n < 100; n++) dest = skinsDir() + L"\\" + base + L" (" + std::to_wstring(n) + L").png";
+    if (!CopyFileW(src.c_str(), dest.c_str(), TRUE)) {
+        setStatus(L"Couldn't add that skin.");
+        return;
+    }
+    selectSkin(dest);
+    setStatus(L"Skin added. Press \"Use in game\" to wear it.");
+}
+
+void removeSkin() {
+    SkinEntry const* e = selectedEntry();
+    if (!e || e->fromGame) return;
+    std::wstring path = e->path;
+    if (_wcsicmp(pendingSkin().c_str(), path.c_str()) == 0) DeleteFileW(pendingSkinFile().c_str());
+    DeleteFileW(path.c_str());
+    gSelectedSkin.clear();
+    saveSettings();
     reloadSkinIfChanged();
-    setStatus(L"Skin preview updated. Playing with Enta updates it automatically.");
+}
+
+// Tell Enta to answer the game's "Choose New Skin" picker with this file.
+void useSkinInGame() {
+    SkinEntry const* e = selectedEntry();
+    if (!e || e->fromGame) return;
+    grantAppContainerRead(skinsDir());
+    grantAppContainerRead(e->path);
+    DeleteFileW(appliedSkinFile().c_str());
+    if (!writeFile(pendingSkinFile(), narrow(e->path) + "\n")) {
+        setStatus(L"Couldn't save your choice.");
+        return;
+    }
+    gPendingSkin = e->path;
+    gAppliedSkin.clear();
+    setStatus(L"In game: Dressing Room > Classic Skins > Choose New Skin.");
 }
 
 // ------------------------------------------------------------------------------------------------ mods
@@ -725,7 +851,7 @@ void paintViewer(HDC dc) {
     if (!skin::isSupported(gSkin)) {
         RECT r = kViewer;
         r.top += h / 2 - 30;
-        text(dc, L"Play once with Enta to load\nyour skin here, or choose\na skin file below.", r, gBodyFont,
+        text(dc, L"Play once with Enta to see\nyour skin here, or add one\nwith \"Add skin\".", r, gBodyFont,
              kSubText, DT_CENTER | DT_WORDBREAK);
         return;
     }
@@ -752,6 +878,58 @@ void paintViewer(HDC dc) {
     AlphaBlend(dc, kViewer.left, kViewer.top, w, h, mem, 0, 0, w, h, bf);
     SelectObject(mem, old);
     DeleteDC(mem);
+}
+
+void arrow(HDC dc, RECT r, bool left, COLORREF c) {
+    const int cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
+    POINT pts[3] = { { left ? cx + 4 : cx - 4, cy - 7 }, { left ? cx + 4 : cx - 4, cy + 7 }, { left ? cx - 5 : cx + 5, cy } };
+    HBRUSH b = CreateSolidBrush(c);
+    HGDIOBJ ob = SelectObject(dc, b), op = SelectObject(dc, GetStockObject(NULL_PEN));
+    Polygon(dc, pts, 3);
+    SelectObject(dc, ob);
+    SelectObject(dc, op);
+    DeleteObject(b);
+}
+
+void paintSkinControls(HDC dc) {
+    SkinEntry const* e = selectedEntry();
+    const bool many = gSkins.size() > 1;
+    if (many) {
+        arrow(dc, kPrev, true, gHoverSkin == SB_Prev ? kPurpleHot : kSubText);
+        arrow(dc, kNext, false, gHoverSkin == SB_Next ? kPurpleHot : kSubText);
+    }
+    if (e) {
+        text(dc, e->label, kSkinName, gBodyFont, kText, DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        if (!e->fromGame)
+            text(dc, L"Remove", kRemoveSkin, gSmallFont, gHoverSkin == SB_Remove ? kPurpleHot : kSubText,
+                 DT_RIGHT | DT_SINGLELINE);
+    }
+
+    // where this skin stands
+    std::wstring note;
+    COLORREF noteColor = kSubText;
+    if (e && !e->fromGame) {
+        if (_wcsicmp(pendingSkin().c_str(), e->path.c_str()) == 0) {
+            note = L"Ready: press Choose New Skin in game";
+            noteColor = kWarn;
+        } else if (_wcsicmp(appliedSkin().c_str(), e->path.c_str()) == 0) {
+            note = L"Sent to the game";
+        } else if (skin::isSupported(gSkin)) {
+            note = skin::isSlim(gSkin) ? L"Slim arms" : L"Classic arms";
+        }
+    } else if (e) {
+        note = L"Updates every time you play";
+    }
+    text(dc, note, kSkinNote, gSmallFont, noteColor, DT_CENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+    // buttons
+    fillRound(dc, kAddSkin, 12, gHoverSkin == SB_Add ? kPanelHover : kPanel, kPurpleDim);
+    text(dc, L"Add skin", kAddSkin, gBodyFont, kText, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+    const bool canUse = e && !e->fromGame;
+    fillRound(dc, kUseSkin, 12, !canUse ? kPurpleDim : (gHoverSkin == SB_Use ? kPurpleHot : kPurple),
+              canUse ? kPurple : kPurpleDim);
+    text(dc, canUse ? L"Use in game" : L"Wearing this", kUseSkin, gBodyFont, canUse ? kText : kSubText,
+         DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 }
 
 void paint(HWND hwnd) {
@@ -801,11 +979,10 @@ void paint(HWND hwnd) {
 
     // ---- skin panel
     fillRound(dc, kSkinPanel, 16, kPanel, kPurpleDim);
-    text(dc, L"YOUR SKIN", { kSkinPanel.left + 14, kSkinPanel.top + 8, kSkinPanel.right, kSkinPanel.top + 28 },
+    text(dc, L"SKINS", { kSkinPanel.left + 14, kSkinPanel.top + 8, kSkinPanel.right, kSkinPanel.top + 28 },
          gHeadFont, kSubText, DT_LEFT | DT_SINGLELINE);
     paintViewer(dc);
-    text(dc, L"Choose skin file...", kChooseSkin, gSmallFont, gHoverChoose ? kPurpleHot : kSubText,
-         DT_CENTER | DT_SINGLELINE | DT_VCENTER);
+    paintSkinControls(dc);
 
     // ---- mods panel
     fillRound(dc, kModsPanel, 16, kPanel, kPurpleDim);
@@ -926,14 +1103,20 @@ LRESULT CALLBACK wndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         }
         bool l = PtInRect(&kLaunch, p) != 0, c = PtInRect(&kClose, p) != 0, m = PtInRect(&kMin, p) != 0,
-             s = PtInRect(&kChooseSkin, p) != 0, ch = PtInRect(&kChannel, p) != 0;
+             ch = PtInRect(&kChannel, p) != 0;
+        int sb = PtInRect(&kPrev, p)       ? SB_Prev
+                 : PtInRect(&kNext, p)     ? SB_Next
+                 : PtInRect(&kAddSkin, p)  ? SB_Add
+                 : PtInRect(&kUseSkin, p)  ? SB_Use
+                 : PtInRect(&kRemoveSkin, p) ? SB_Remove
+                                             : SB_None;
         int row = rowAt(p);
-        if (l != gHoverLaunch || c != gHoverClose || m != gHoverMin || s != gHoverChoose || ch != gHoverChannel ||
+        if (l != gHoverLaunch || c != gHoverClose || m != gHoverMin || sb != gHoverSkin || ch != gHoverChannel ||
             row != gHoverRow) {
             gHoverLaunch = l;
             gHoverClose = c;
             gHoverMin = m;
-            gHoverChoose = s;
+            gHoverSkin = sb;
             gHoverChannel = ch;
             gHoverRow = row;
             InvalidateRect(h, nullptr, FALSE);
@@ -943,7 +1126,8 @@ LRESULT CALLBACK wndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
         return 0;
     }
     case WM_MOUSELEAVE:
-        gHoverLaunch = gHoverClose = gHoverMin = gHoverChoose = gHoverChannel = false;
+        gHoverLaunch = gHoverClose = gHoverMin = gHoverChannel = false;
+        gHoverSkin = SB_None;
         gHoverRow = -1;
         InvalidateRect(h, nullptr, FALSE);
         return 0;
@@ -973,8 +1157,23 @@ LRESULT CALLBACK wndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
             onLaunch();
             return 0;
         }
-        if (PtInRect(&kChooseSkin, p)) {
-            chooseSkin();
+        if (PtInRect(&kPrev, p) || PtInRect(&kNext, p)) {
+            stepSkin(PtInRect(&kPrev, p) ? -1 : 1);
+            InvalidateRect(h, nullptr, FALSE);
+            return 0;
+        }
+        if (PtInRect(&kAddSkin, p)) {
+            addSkin();
+            InvalidateRect(h, nullptr, FALSE);
+            return 0;
+        }
+        if (PtInRect(&kUseSkin, p)) {
+            useSkinInGame();
+            InvalidateRect(h, nullptr, FALSE);
+            return 0;
+        }
+        if (PtInRect(&kRemoveSkin, p)) {
+            removeSkin();
             InvalidateRect(h, nullptr, FALSE);
             return 0;
         }

@@ -28,8 +28,10 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
   and the JavaScript plugin system are still included
 
 ## Enta Launcher
-- **3D skin preview:** your skin spins in the launcher (drag to turn it). Enta saves your skin there every time
-  you play; you can also pick a skin file. Classic, slim and old 64x32 skins all work.
+- **Skins:** a spinning 3D preview (drag to turn it) of your in-game skin and any skins you add.
+  Pick one and press **Use in game**; then in Minecraft open Dressing Room > Classic Skins > **Choose New Skin**,
+  and Enta picks that file for you (no file dialog). This is Bedrock's own custom-skin import, so other players
+  see it too. Classic, slim, old 64x32 and HD skins all work.
 - **Mods list:** switch modules on/off before starting the game. Your choices apply when Enta loads.
 - **Auto-updates:** the launcher checks GitHub on start and updates itself and Enta.dll.
   - **Stable** gets builds from `main`.

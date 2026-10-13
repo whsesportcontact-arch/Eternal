@@ -4,6 +4,7 @@
 #include "client/config/ConfigManager.h"
 #include "client/feature/module/ModuleManager.h"
 #include "util/Util.h"
+#include "client/misc/Notifications.h"
 
 #include <wincodec.h>
 #include <wrl/client.h>
@@ -91,6 +92,7 @@ LauncherBridge::LauncherBridge()
              nokeybind, false, /*visible*/ false) {
     // runs whether or not the module is "enabled"; it's an internal helper
     listen<TickEvent>(static_cast<EventListenerFunc>(&LauncherBridge::onTick), true);
+    listen<UpdateEvent>(static_cast<EventListenerFunc>(&LauncherBridge::onUpdate), true);
 }
 
 fs::path LauncherBridge::folder() {
@@ -173,9 +175,41 @@ void LauncherBridge::exportSkin(SDK::Level* level) {
     }
 }
 
+namespace {
+    std::optional<std::string> readPendingSkin() {
+        std::ifstream f(util::GetLatitePath() / "Launcher" / "pending_skin.txt");
+        if (!f) return std::nullopt;
+        std::string path;
+        std::getline(f, path);
+        while (!path.empty() && (path.back() == '\r' || path.back() == ' ')) path.pop_back();
+        std::error_code ec;
+        if (path.empty() || !fs::is_regular_file(fs::path(util::StrToWStr(path)), ec)) return std::nullopt;
+        return path;
+    }
+}
+
+std::optional<std::string> LauncherBridge::takePendingSkin() {
+    auto path = readPendingSkin();
+    std::error_code ec;
+    fs::remove(folder() / "pending_skin.txt", ec);
+    if (path) writeAtomically(folder() / "skin_applied.txt", *path + "\n"); // lets the launcher show it worked
+    return path;
+}
+
 void LauncherBridge::onTick(Event& evG) {
     auto& ev = reinterpret_cast<TickEvent&>(evG);
     // about every 5 seconds; cheap when nothing changed
     if (++tickCounter % 100 != 1) return;
     exportSkin(ev.getLevel());
+}
+
+// runs every frame, also in menus (where the Dressing Room is)
+void LauncherBridge::onUpdate(Event&) {
+    if (toldAboutSkin || ++frameCounter % 300 != 1) return;
+
+    // once per session, point the way to applying the launcher's skin
+    if (readPendingSkin()) {
+        toldAboutSkin = true;
+        Latite::getNotifications().push(L"Your launcher skin is ready: Dressing Room > Classic Skins > Choose New Skin");
+    }
 }
