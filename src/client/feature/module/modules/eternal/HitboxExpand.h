@@ -3,8 +3,10 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 // Enta: makes mobs easier to hit by growing their client-side bounding boxes.
+// Every entity has its own on/off toggle, grouped under a category toggle.
 // Only runs in your own singleplayer worlds. On servers and Realms it restores every box and does nothing.
 // Never touches players.
 class HitboxExpand : public Module {
@@ -13,7 +15,6 @@ public:
 
     void onTick(Event& ev);
     void onEnable() override;
-    void onDisable() override;
 
     enum Group : uint8_t { Hostile, Neutral, Passive, Boss, Projectile, Vehicle, Drop, Unlisted, Never };
 
@@ -25,11 +26,16 @@ private:
         float v = 0.f;
     };
 
-    Group classify(std::string const& id);
+    struct Lookup {
+        Group group = Unlisted;
+        int toggle = -1; // index into entityToggles, -1 = no per-entity toggle
+    };
+
+    Lookup classify(std::string const& id);
     bool groupEnabled(Group g);
     bool isLocalWorld();
     void restoreAll();
-    void parseLists();
+    void parseIncludeList();
 
     ValueType horizontal = FloatValue(0.5f);
     ValueType vertical = FloatValue(0.25f);
@@ -44,12 +50,14 @@ private:
     ValueType unlisted = BoolValue(true);
 
     ValueType include = TextValue(L"");
-    ValueType exclude = TextValue(L"");
+
+    // One toggle per entity. Reserved up front and never resized: settings keep pointers into it.
+    std::vector<ValueType> entityToggles;
+    std::unordered_map<std::string, Lookup> idLookup;
 
     std::unordered_map<SDK::Actor*, Tracked> tracked;
-    std::unordered_map<std::string, Group> groupCache;
-    std::unordered_set<std::string> includeSet, excludeSet;
-    std::wstring lastInclude, lastExclude;
+    std::unordered_set<std::string> includeSet;
+    std::wstring lastInclude;
 
     int tickCounter = 0;
     bool allowed = false;

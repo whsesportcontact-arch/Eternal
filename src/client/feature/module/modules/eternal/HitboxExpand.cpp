@@ -9,98 +9,152 @@
 #include <cmath>
 
 namespace {
-    // Every vanilla Bedrock entity identifier (without the "minecraft:" prefix), sorted into groups.
-    // Anything not listed here (add-on mobs, entities from future updates) falls into "Unlisted".
-    struct Entry {
-        const char* id;
-        HitboxExpand::Group group;
-    };
-
     using G = HitboxExpand::Group;
+
+    // Every vanilla Bedrock entity. `ids` lists the game identifiers (without "minecraft:") that the toggle covers,
+    // separated by commas, because a few mobs exist under an old and a new identifier.
+    // Anything not listed here (add-on mobs, entities from future updates) falls under "Other Entities".
+    struct Entry {
+        const wchar_t* name;
+        G group;
+        const char* ids;
+    };
 
     constexpr Entry kEntities[] = {
         // Hostile
-        { "blaze", G::Hostile },           { "bogged", G::Hostile },
-        { "breeze", G::Hostile },          { "camel_husk", G::Hostile },
-        { "cave_spider", G::Hostile },     { "creaking", G::Hostile },
-        { "creeper", G::Hostile },         { "drowned", G::Hostile },
-        { "endermite", G::Hostile },       { "evocation_illager", G::Hostile },
-        { "ghast", G::Hostile },           { "guardian", G::Hostile },
-        { "hoglin", G::Hostile },          { "husk", G::Hostile },
-        { "magma_cube", G::Hostile },      { "parched", G::Hostile },
-        { "phantom", G::Hostile },         { "piglin_brute", G::Hostile },
-        { "pillager", G::Hostile },        { "ravager", G::Hostile },
-        { "shulker", G::Hostile },         { "silverfish", G::Hostile },
-        { "skeleton", G::Hostile },        { "slime", G::Hostile },
-        { "spider", G::Hostile },          { "stray", G::Hostile },
-        { "vex", G::Hostile },             { "vindicator", G::Hostile },
-        { "witch", G::Hostile },           { "wither_skeleton", G::Hostile },
-        { "zoglin", G::Hostile },          { "zombie", G::Hostile },
-        { "zombie_nautilus", G::Hostile }, { "zombie_villager", G::Hostile },
-        { "zombie_villager_v2", G::Hostile },
+        { L"Blaze", G::Hostile, "blaze" },
+        { L"Bogged", G::Hostile, "bogged" },
+        { L"Breeze", G::Hostile, "breeze" },
+        { L"Camel Husk", G::Hostile, "camel_husk" },
+        { L"Cave Spider", G::Hostile, "cave_spider" },
+        { L"Creaking", G::Hostile, "creaking" },
+        { L"Creeper", G::Hostile, "creeper" },
+        { L"Drowned", G::Hostile, "drowned" },
+        { L"Endermite", G::Hostile, "endermite" },
+        { L"Evoker", G::Hostile, "evocation_illager" },
+        { L"Ghast", G::Hostile, "ghast" },
+        { L"Guardian", G::Hostile, "guardian" },
+        { L"Hoglin", G::Hostile, "hoglin" },
+        { L"Husk", G::Hostile, "husk" },
+        { L"Magma Cube", G::Hostile, "magma_cube" },
+        { L"Parched", G::Hostile, "parched" },
+        { L"Phantom", G::Hostile, "phantom" },
+        { L"Piglin Brute", G::Hostile, "piglin_brute" },
+        { L"Pillager", G::Hostile, "pillager" },
+        { L"Ravager", G::Hostile, "ravager" },
+        { L"Shulker", G::Hostile, "shulker" },
+        { L"Silverfish", G::Hostile, "silverfish" },
+        { L"Skeleton", G::Hostile, "skeleton" },
+        { L"Slime", G::Hostile, "slime" },
+        { L"Spider", G::Hostile, "spider" },
+        { L"Stray", G::Hostile, "stray" },
+        { L"Vex", G::Hostile, "vex" },
+        { L"Vindicator", G::Hostile, "vindicator" },
+        { L"Witch", G::Hostile, "witch" },
+        { L"Wither Skeleton", G::Hostile, "wither_skeleton" },
+        { L"Zoglin", G::Hostile, "zoglin" },
+        { L"Zombie", G::Hostile, "zombie" },
+        { L"Zombie Nautilus", G::Hostile, "zombie_nautilus" },
+        { L"Zombie Villager", G::Hostile, "zombie_villager_v2,zombie_villager" },
 
         // Neutral (attack only when provoked)
-        { "bee", G::Neutral },             { "dolphin", G::Neutral },
-        { "enderman", G::Neutral },        { "goat", G::Neutral },
-        { "iron_golem", G::Neutral },      { "llama", G::Neutral },
-        { "panda", G::Neutral },           { "piglin", G::Neutral },
-        { "polar_bear", G::Neutral },      { "trader_llama", G::Neutral },
-        { "wolf", G::Neutral },            { "zombie_pigman", G::Neutral }, // zombified piglin
+        { L"Bee", G::Neutral, "bee" },
+        { L"Dolphin", G::Neutral, "dolphin" },
+        { L"Enderman", G::Neutral, "enderman" },
+        { L"Goat", G::Neutral, "goat" },
+        { L"Iron Golem", G::Neutral, "iron_golem" },
+        { L"Llama", G::Neutral, "llama" },
+        { L"Panda", G::Neutral, "panda" },
+        { L"Piglin", G::Neutral, "piglin" },
+        { L"Polar Bear", G::Neutral, "polar_bear" },
+        { L"Trader Llama", G::Neutral, "trader_llama" },
+        { L"Wolf", G::Neutral, "wolf" },
+        { L"Zombified Piglin", G::Neutral, "zombie_pigman" },
 
         // Passive
-        { "allay", G::Passive },           { "armadillo", G::Passive },
-        { "axolotl", G::Passive },         { "bat", G::Passive },
-        { "camel", G::Passive },           { "cat", G::Passive },
-        { "chicken", G::Passive },         { "cod", G::Passive },
-        { "copper_golem", G::Passive },    { "cow", G::Passive },
-        { "donkey", G::Passive },          { "fox", G::Passive },
-        { "frog", G::Passive },            { "glow_squid", G::Passive },
-        { "happy_ghast", G::Passive },     { "horse", G::Passive },
-        { "mooshroom", G::Passive },       { "mule", G::Passive },
-        { "nautilus", G::Passive },        { "ocelot", G::Passive },
-        { "parrot", G::Passive },          { "pig", G::Passive },
-        { "pufferfish", G::Passive },      { "rabbit", G::Passive },
-        { "salmon", G::Passive },          { "sheep", G::Passive },
-        { "skeleton_horse", G::Passive },  { "sniffer", G::Passive },
-        { "snow_golem", G::Passive },      { "squid", G::Passive },
-        { "strider", G::Passive },         { "tadpole", G::Passive },
-        { "tropicalfish", G::Passive },    { "turtle", G::Passive },
-        { "villager", G::Passive },        { "villager_v2", G::Passive },
-        { "wandering_trader", G::Passive },{ "zombie_horse", G::Passive },
+        { L"Allay", G::Passive, "allay" },
+        { L"Armadillo", G::Passive, "armadillo" },
+        { L"Axolotl", G::Passive, "axolotl" },
+        { L"Bat", G::Passive, "bat" },
+        { L"Camel", G::Passive, "camel" },
+        { L"Cat", G::Passive, "cat" },
+        { L"Chicken", G::Passive, "chicken" },
+        { L"Cod", G::Passive, "cod" },
+        { L"Copper Golem", G::Passive, "copper_golem" },
+        { L"Cow", G::Passive, "cow" },
+        { L"Donkey", G::Passive, "donkey" },
+        { L"Fox", G::Passive, "fox" },
+        { L"Frog", G::Passive, "frog" },
+        { L"Glow Squid", G::Passive, "glow_squid" },
+        { L"Happy Ghast", G::Passive, "happy_ghast" },
+        { L"Horse", G::Passive, "horse" },
+        { L"Mooshroom", G::Passive, "mooshroom" },
+        { L"Mule", G::Passive, "mule" },
+        { L"Nautilus", G::Passive, "nautilus" },
+        { L"Ocelot", G::Passive, "ocelot" },
+        { L"Parrot", G::Passive, "parrot" },
+        { L"Pig", G::Passive, "pig" },
+        { L"Pufferfish", G::Passive, "pufferfish" },
+        { L"Rabbit", G::Passive, "rabbit" },
+        { L"Salmon", G::Passive, "salmon" },
+        { L"Sheep", G::Passive, "sheep" },
+        { L"Skeleton Horse", G::Passive, "skeleton_horse" },
+        { L"Sniffer", G::Passive, "sniffer" },
+        { L"Snow Golem", G::Passive, "snow_golem" },
+        { L"Squid", G::Passive, "squid" },
+        { L"Strider", G::Passive, "strider" },
+        { L"Tadpole", G::Passive, "tadpole" },
+        { L"Tropical Fish", G::Passive, "tropicalfish" },
+        { L"Turtle", G::Passive, "turtle" },
+        { L"Villager", G::Passive, "villager_v2,villager" },
+        { L"Wandering Trader", G::Passive, "wandering_trader" },
+        { L"Zombie Horse", G::Passive, "zombie_horse" },
 
         // Bosses
-        { "elder_guardian", G::Boss },     { "ender_dragon", G::Boss },
-        { "warden", G::Boss },             { "wither", G::Boss },
+        { L"Elder Guardian", G::Boss, "elder_guardian" },
+        { L"Ender Dragon", G::Boss, "ender_dragon" },
+        { L"Warden", G::Boss, "warden" },
+        { L"Wither", G::Boss, "wither" },
 
         // Projectiles (handy for knocking ghast fireballs back)
-        { "arrow", G::Projectile },               { "breeze_wind_charge_projectile", G::Projectile },
-        { "dragon_fireball", G::Projectile },     { "egg", G::Projectile },
-        { "ender_pearl", G::Projectile },         { "fireball", G::Projectile },
-        { "fireworks_rocket", G::Projectile },    { "fishing_hook", G::Projectile },
-        { "lingering_potion", G::Projectile },    { "llama_spit", G::Projectile },
-        { "shulker_bullet", G::Projectile },      { "small_fireball", G::Projectile },
-        { "snowball", G::Projectile },            { "splash_potion", G::Projectile },
-        { "thrown_trident", G::Projectile },      { "wind_charge_projectile", G::Projectile },
-        { "wither_skull", G::Projectile },        { "wither_skull_dangerous", G::Projectile },
-        { "xp_bottle", G::Projectile },
+        { L"Arrow", G::Projectile, "arrow" },
+        { L"Breeze Wind Charge", G::Projectile, "breeze_wind_charge_projectile" },
+        { L"Dragon Fireball", G::Projectile, "dragon_fireball" },
+        { L"Egg", G::Projectile, "egg" },
+        { L"Ender Pearl", G::Projectile, "ender_pearl" },
+        { L"Ghast Fireball", G::Projectile, "fireball" },
+        { L"Firework Rocket", G::Projectile, "fireworks_rocket" },
+        { L"Fishing Bobber", G::Projectile, "fishing_hook" },
+        { L"Llama Spit", G::Projectile, "llama_spit" },
+        { L"Potion", G::Projectile, "splash_potion,lingering_potion" },
+        { L"Shulker Bullet", G::Projectile, "shulker_bullet" },
+        { L"Small Fireball", G::Projectile, "small_fireball" },
+        { L"Snowball", G::Projectile, "snowball" },
+        { L"Trident", G::Projectile, "thrown_trident" },
+        { L"Wind Charge", G::Projectile, "wind_charge_projectile" },
+        { L"Wither Skull", G::Projectile, "wither_skull,wither_skull_dangerous" },
+        { L"Bottle o' Enchanting", G::Projectile, "xp_bottle" },
 
         // Vehicles and other objects
-        { "armor_stand", G::Vehicle },            { "boat", G::Vehicle },
-        { "chest_boat", G::Vehicle },             { "chest_minecart", G::Vehicle },
-        { "command_block_minecart", G::Vehicle }, { "ender_crystal", G::Vehicle },
-        { "hopper_minecart", G::Vehicle },        { "minecart", G::Vehicle },
-        { "tnt_minecart", G::Vehicle },
+        { L"Armor Stand", G::Vehicle, "armor_stand" },
+        { L"Boat", G::Vehicle, "boat" },
+        { L"Boat with Chest", G::Vehicle, "chest_boat" },
+        { L"End Crystal", G::Vehicle, "ender_crystal" },
+        { L"Minecart", G::Vehicle, "minecart" },
+        { L"Minecart with Chest", G::Vehicle, "chest_minecart" },
+        { L"Minecart with Command Block", G::Vehicle, "command_block_minecart" },
+        { L"Minecart with Hopper", G::Vehicle, "hopper_minecart" },
+        { L"Minecart with TNT", G::Vehicle, "tnt_minecart" },
 
         // Dropped items and XP
-        { "item", G::Drop },                      { "xp_orb", G::Drop },
+        { L"Dropped Item", G::Drop, "item" },
+        { L"Experience Orb", G::Drop, "xp_orb" },
+    };
 
-        // Never expanded: these aren't things you hit, and growing them can break blocks/physics
-        { "agent", G::Never },                    { "area_effect_cloud", G::Never },
-        { "evocation_fang", G::Never },           { "eye_of_ender_signal", G::Never },
-        { "falling_block", G::Never },            { "leash_knot", G::Never },
-        { "lightning_bolt", G::Never },           { "npc", G::Never },
-        { "ominous_item_spawner", G::Never },     { "painting", G::Never },
-        { "player", G::Never },                   { "tnt", G::Never },
+    // Never expanded: not things you hit, and growing them can break blocks or physics.
+    constexpr const char* kNever[] = {
+        "agent", "area_effect_cloud", "evocation_fang", "eye_of_ender_signal", "falling_block", "leash_knot",
+        "lightning_bolt", "npc", "ominous_item_spawner", "painting", "player", "tnt",
     };
 
     std::string normalizeId(std::string s) {
@@ -112,6 +166,19 @@ namespace {
         s.erase(0, start);
         if (s.starts_with("minecraft:")) s.erase(0, 10);
         return s;
+    }
+
+    std::vector<std::string> splitIds(std::string const& s) {
+        std::vector<std::string> out;
+        size_t start = 0;
+        while (start <= s.size()) {
+            size_t comma = s.find(',', start);
+            if (comma == std::string::npos) comma = s.size();
+            auto id = normalizeId(s.substr(start, comma - start));
+            if (!id.empty()) out.push_back(std::move(id));
+            start = comma + 1;
+        }
+        return out;
     }
 
     bool sameBox(AABB const& a, AABB const& b) {
@@ -131,24 +198,47 @@ HitboxExpand::HitboxExpand()
              L"Makes mobs easier to hit by growing their hitboxes. Singleplayer worlds only, never players.", GAME) {
     addSliderSetting("horizontal", L"Width", L"Blocks added to each side of the hitbox.", horizontal,
                      FloatValue(0.f), FloatValue(2.f), FloatValue(0.05f));
-    addSliderSetting("vertical", L"Height", L"Blocks added to the top of the hitbox.", vertical,
-                     FloatValue(0.f), FloatValue(2.f), FloatValue(0.05f));
+    addSliderSetting("vertical", L"Height", L"Blocks added to the top of the hitbox.", vertical, FloatValue(0.f),
+                     FloatValue(2.f), FloatValue(0.05f));
 
-    addSetting("hostile", L"Hostile Mobs", L"Zombies, skeletons, wither skeletons, creepers, blazes and the rest.",
-               hostile);
-    addSetting("neutral", L"Neutral Mobs", L"Endermen, piglins, zombified piglins, wolves, bees, golems...", neutral);
-    addSetting("passive", L"Passive Mobs", L"Animals, villagers, fish and other friendly mobs.", passive);
-    addSetting("bosses", L"Bosses", L"Wither, Ender Dragon, Warden and Elder Guardian.", bosses);
-    addSetting("projectiles", L"Projectiles", L"Ghast fireballs, wither skulls, arrows and other projectiles.",
-               projectiles);
-    addSetting("vehicles", L"Vehicles & Objects", L"Boats, minecarts, armor stands and end crystals.", vehicles);
-    addSetting("drops", L"Items & XP", L"Dropped items and experience orbs.", drops);
-    addSetting("unlisted", L"Other Entities", L"Add-on mobs and anything new that isn't in the built-in list.",
+    // Never resized after this, because each setting keeps a pointer to its toggle.
+    entityToggles.reserve(std::size(kEntities));
+
+    auto addCategory = [this](G group, const char* setting, std::wstring const& name, std::wstring const& desc,
+                              ValueType& value) {
+        addSetting(setting, name, desc, value);
+
+        // the entity toggles for this category, only shown while the category is on
+        for (auto const& e : kEntities) {
+            if (e.group != group) continue;
+            auto ids = splitIds(e.ids);
+            const int index = static_cast<int>(entityToggles.size());
+            entityToggles.emplace_back(BoolValue(true));
+            for (auto const& id : ids) idLookup[id] = Lookup { group, index };
+
+            addSetting("entity_" + ids.front(), std::wstring(L"    ") + e.name, L"", entityToggles.back(),
+                       Setting::Condition(setting));
+        }
+    };
+
+    addCategory(G::Hostile, "hostile", L"Hostile Mobs", L"Zombies, skeletons, wither skeletons, creepers, blazes...",
+                hostile);
+    addCategory(G::Neutral, "neutral", L"Neutral Mobs", L"Endermen, piglins, zombified piglins, wolves, golems...",
+                neutral);
+    addCategory(G::Passive, "passive", L"Passive Mobs", L"Animals, villagers, fish and other friendly mobs.", passive);
+    addCategory(G::Boss, "bosses", L"Bosses", L"Wither, Ender Dragon, Warden and Elder Guardian.", bosses);
+    addCategory(G::Projectile, "projectiles", L"Projectiles",
+                L"Ghast fireballs, wither skulls, arrows and other projectiles.", projectiles);
+    addCategory(G::Vehicle, "vehicles", L"Vehicles & Objects", L"Boats, minecarts, armor stands and end crystals.",
+                vehicles);
+    addCategory(G::Drop, "drops", L"Items & XP", L"Dropped items and experience orbs.", drops);
+
+    for (auto const* id : kNever) idLookup[id] = Lookup { G::Never, -1 };
+
+    addSetting("unlisted", L"Other Entities", L"Add-on mobs and anything new that isn't in the list above.",
                unlisted);
-    addSetting("include", L"Always Include", L"Comma-separated entity IDs to always expand, e.g. wither_skeleton",
-               include);
-    addSetting("exclude", L"Always Exclude", L"Comma-separated entity IDs to never expand, e.g. villager_v2,cat",
-               exclude);
+    addSetting("include", L"Extra Entity IDs",
+               L"Comma-separated IDs to always expand, for add-on mobs, e.g. mymod:frost_zombie", include);
 
     // keep listening while disabled so boxes get put back on the game thread
     listen<TickEvent>(static_cast<EventListenerFunc>(&HitboxExpand::onTick), true);
@@ -158,17 +248,13 @@ void HitboxExpand::onEnable() {
     reported = false;
 }
 
-void HitboxExpand::onDisable() {
-    // restoring happens on the next tick (game thread), see onTick
-}
-
 bool HitboxExpand::isLocalWorld() {
     std::string host;
     if (auto* info = SDK::RemoteConnectorComposite::getConnectionInfo()) host = info->hostIpAddress;
     const bool local = host.empty() || host == "127.0.0.1" || host == "localhost" || host == "::1" ||
                        host == "0.0.0.0";
 
-    if (isEnabled() && (!reported || host != reportedHost)) {
+    if (!reported || host != reportedHost) {
         reported = true;
         reportedHost = host;
         pushChat(local ? "Hitbox Expand is \xC2\xA7" "aON\xC2\xA7" "r (singleplayer world)."
@@ -178,44 +264,17 @@ bool HitboxExpand::isLocalWorld() {
     return local;
 }
 
-void HitboxExpand::parseLists() {
-    auto parse = [](std::wstring const& w, std::unordered_set<std::string>& out) {
-        out.clear();
-        std::string s = util::WStrToStr(w);
-        size_t start = 0;
-        while (start <= s.size()) {
-            size_t comma = s.find(',', start);
-            if (comma == std::string::npos) comma = s.size();
-            auto id = normalizeId(s.substr(start, comma - start));
-            if (!id.empty()) out.insert(id);
-            start = comma + 1;
-        }
-    };
-
+void HitboxExpand::parseIncludeList() {
     auto& inc = std::get<TextValue>(include).str;
-    auto& exc = std::get<TextValue>(exclude).str;
-    if (inc != lastInclude) {
-        lastInclude = inc;
-        parse(inc, includeSet);
-    }
-    if (exc != lastExclude) {
-        lastExclude = exc;
-        parse(exc, excludeSet);
-    }
+    if (inc == lastInclude) return;
+    lastInclude = inc;
+    includeSet.clear();
+    for (auto& id : splitIds(util::WStrToStr(inc))) includeSet.insert(std::move(id));
 }
 
-HitboxExpand::Group HitboxExpand::classify(std::string const& id) {
-    if (auto it = groupCache.find(id); it != groupCache.end()) return it->second;
-
-    Group g = Unlisted;
-    for (auto const& e : kEntities) {
-        if (id == e.id) {
-            g = e.group;
-            break;
-        }
-    }
-    groupCache.emplace(id, g);
-    return g;
+HitboxExpand::Lookup HitboxExpand::classify(std::string const& id) {
+    if (auto it = idLookup.find(id); it != idLookup.end()) return it->second;
+    return Lookup { Unlisted, -1 };
 }
 
 bool HitboxExpand::groupEnabled(Group g) {
@@ -257,7 +316,7 @@ void HitboxExpand::onTick(Event& evG) {
     auto level = ev.getLevel();
     if (!level) {
         tracked.clear(); // world unloaded, every pointer is gone
-        groupCache.clear();
+        reported = false;
         return;
     }
 
@@ -272,7 +331,7 @@ void HitboxExpand::onTick(Event& evG) {
         return;
     }
 
-    parseLists();
+    parseIncludeList();
 
     const float h = (std::max)(0.f, static_cast<float>(std::get<FloatValue>(horizontal)));
     const float v = (std::max)(0.f, static_cast<float>(std::get<FloatValue>(vertical)));
@@ -288,11 +347,16 @@ void HitboxExpand::onTick(Event& evG) {
         auto& bb = entt->getBoundingBox();
         auto prev = tracked.find(entt);
 
-        const std::string id = normalizeId(entt->getEntityTypeName());
         bool want = false;
-        if (!id.empty() && !excludeSet.contains(id)) {
-            const Group g = classify(id);
-            want = g != Never && (includeSet.contains(id) || groupEnabled(g));
+        if (const std::string id = normalizeId(entt->getEntityTypeName()); !id.empty()) {
+            const Lookup l = classify(id);
+            if (l.group != Never) {
+                if (includeSet.contains(id)) {
+                    want = true;
+                } else if (groupEnabled(l.group)) {
+                    want = l.toggle < 0 || static_cast<bool>(std::get<BoolValue>(entityToggles[l.toggle]));
+                }
+            }
         }
 
         // Work out the vanilla box: if what's there is still our write, the game hasn't touched it.
