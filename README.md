@@ -15,7 +15,13 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
 - **Enta Pack:** builds a resource pack from your own game files with Low Fire (screen + ground), Low Shield,
   Small Totem Pop, and fewer combat/ambient particles for FPS. Turn on "Enta Pack" once in
   Settings > Global Resources > My Packs; after that, changing a setting rebuilds it (rejoin to apply).
-- All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Motion Blur, Toggle Sprint, Minimap...)
+- **Performance Mode:** one switch (bind it to a key) that turns off the heaviest modules, and optionally your HUD,
+  then turns exactly those back on when you switch it off.
+- **Lag Check:** HUD readout with FPS, ping and whether the server/Realm has stopped responding, plus a
+  "Lag:" line saying if it's your PC, your connection, or the server. "Show Module Costs" lists which Enta
+  modules use the most time per frame.
+- **Removed:** Motion Blur.
+- All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Toggle Sprint, Minimap...)
   and the JavaScript plugin system are still included
 
 ## Build (Windows)

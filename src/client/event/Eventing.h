@@ -1,6 +1,7 @@
 #pragma once
 #include "client/event/Event.h"
 #include "client/event/Listener.h"
+#include "client/misc/ModuleProfiler.h"
 #include <bit>
 #include <concepts>
 #include <cstddef>
@@ -45,7 +46,10 @@ public:
             if ((registration.callback.callWhileInactive || state->listener->shouldListen()) &&
                 state->listener->shouldListenToEvent(EventType::hash)) {
                 const bool isCancel = ev.isCancellable();
-                (state->listener->*registration.callback.fptr)(ev);
+                {
+                    ModuleProfiler::Scope timed { state->listener };
+                    (state->listener->*registration.callback.fptr)(ev);
+                }
                 if (isCancel) {
                     auto& cEv = reinterpret_cast<Cancellable&>(ev);
                     if (cEv.isCancelled()) {
