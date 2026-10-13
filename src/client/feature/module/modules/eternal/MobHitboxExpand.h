@@ -17,10 +17,12 @@ public:
 private:
     // returns an empty string when this is your own solo world, otherwise why it isn't
     std::string notSoloReason(SDK::Level* level);
-    bool isSelected(uint32_t entityTypeId);
+    bool isSelected(SDK::Actor* actor);
     void apply(bool expand);
 
     ValueType extraWidth = FloatValue(0.3f);
+    ValueType addonMobs = BoolValue(false);   // anything from an add-on (namespace other than minecraft:)
+    ValueType playerNpcs = BoolValue(false);  // player-type entities that aren't real players (NPCs)
     ValueType extraHeight = FloatValue(1.f);
 
     struct MobChoice {

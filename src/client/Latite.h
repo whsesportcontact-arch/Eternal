@@ -178,7 +178,9 @@ private:
     ValueType ejectKey = KeyValue(VK_END);
     ValueType hudBlur = BoolValue(false);
     ValueType hudBlurIntensity = FloatValue(10.f);
-    ValueType menuBlurEnabled = BoolValue(true);
+    // Enta: off by default; the live blur flickered on some PCs (photosensitivity risk). Menus use a steady
+    // dark backdrop instead.
+    ValueType menuBlurEnabled = BoolValue(false);
     // TODO: add disabled settings, for people who already only support dx11, gray it out
     ValueType useDX11 = BoolValue(false);
     ValueType forceDisableVSync = BoolValue(false);

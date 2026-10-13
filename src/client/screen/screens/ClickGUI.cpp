@@ -202,6 +202,8 @@ void ClickGUI::onRender(Event&) {
     float guiWidth = rect.getWidth();
     const bool rtl = Latite::get().getL10nData().isSelectedLanguageRightToLeft();
 
+    // Enta: a steady dark backdrop that fades in (never flickers). The live blur is opt-in in Settings.
+    dc.fillRectangle({ 0.f, 0.f, ss.width, ss.height }, d2d::Color(0.02f, 0.01f, 0.04f, 0.55f * calcAnim));
     if (Latite::get().getMenuBlur())
         dc.drawGaussianBlur(Latite::get().getMenuBlur().value() * (isActive() ? 1.f : calcAnim));
 

@@ -23,7 +23,9 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
   modules use the most time per frame.
 - **Mob Hitbox Expand (Singleplayer, experimental):** makes the mobs you pick (Wither Skeleton by default) easier
   to hit over blocks, for farms in your own world. Turns itself off with a chat message on Realms, servers, and any
-  world with other players, and puts every hitbox back to normal.
+  world with other players, and puts every hitbox back to normal. **Add-on Mobs** and **Player-Type NPCs** cover
+  custom mobs from add-ons (like a skygen world); real players are never affected.
+- **Menus:** a steady dark backdrop instead of the live blur, which could flicker. The blur is opt-in in Settings.
 - **Removed:** Motion Blur.
 - All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Toggle Sprint, Minimap...)
   and the JavaScript plugin system are still included

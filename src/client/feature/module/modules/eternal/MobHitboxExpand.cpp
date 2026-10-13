@@ -40,6 +40,14 @@ MobHitboxExpand::MobHitboxExpand()
         { 38, "enderman", L"Enderman", BoolValue(false) },
         { 45, "witch", L"Witch", BoolValue(false) },
     };
+    addSetting("addonMobs", L"Add-on Mobs",
+               L"Every mob added by an add-on or behavior pack (for example a skygen world's custom mobs).",
+               addonMobs);
+    addSetting("playerNpcs", L"Player-Type NPCs",
+               L"Add-on NPCs that are built like players. Real players are never affected: the module turns off "
+               L"whenever another real player is in the world.",
+               playerNpcs);
+
     // settings keep references into `mobs`, so it must never grow after this point
     for (auto& mob : mobs) {
         addSetting(mob.key, mob.name, L"", mob.enabled);
@@ -57,13 +65,33 @@ std::string MobHitboxExpand::notSoloReason(SDK::Level* level) {
         if (!isLocalAddress(url)) return "you're on a server/Realm (" + url + ")";
     }
     if (!level) return "no world loaded";
-    if (auto* players = level->getPlayerList(); players && players->size() > 1)
-        return "there are other players in this world";
+    if (auto* players = level->getPlayerList(); players && players->size() > 1) {
+        // name them, so it's clear whether these are real people or an add-on's NPCs
+        std::string me;
+        if (auto* lp = SDK::ClientInstance::get()->getLocalPlayer()) me = lp->playerName;
+        std::string names;
+        int shown = 0;
+        for (auto& [uuid, entry] : *players) {
+            std::string n = entry.name;
+            if (n == me) continue;
+            if (shown++ < 3) names += (names.empty() ? "" : ", ") + n;
+        }
+        if (shown > 3) names += ", ...";
+        return "other players are in this world (" + names + ")";
+    }
     return {};
 }
 
-bool MobHitboxExpand::isSelected(uint32_t entityTypeId) {
-    const uint32_t legacy = entityTypeId & 0xFF;
+bool MobHitboxExpand::isSelected(SDK::Actor* actor) {
+    // player-type: only NPCs can get here, the solo-world lock turns everything off when real players are around
+    if (actor->isPlayer()) return std::get<BoolValue>(playerNpcs);
+
+    if (std::get<BoolValue>(addonMobs)) {
+        const std::string ns = actor->getEntityNamespace();
+        if (!ns.empty() && ns != "minecraft") return true;
+    }
+
+    const uint32_t legacy = actor->getEntityTypeID() & 0xFF;
     for (auto& mob : mobs) {
         if (mob.legacyId == legacy) return std::get<BoolValue>(mob.enabled);
     }
@@ -97,14 +125,15 @@ void MobHitboxExpand::apply(bool expand) {
                    Vec3(cx + size.x * 0.5f, bottom + size.y, cz + size.x * 0.5f));
     };
 
+    SDK::Actor* self = ci->getLocalPlayer();
     std::unordered_map<uint64_t, Tracked> next;
     for (auto* actor : level->getRuntimeActorList()) {
-        if (!actor || actor->isPlayer() || !actor->aabbShape) continue;
+        if (!actor || actor == self || !actor->aabbShape) continue; // never you
 
         const uint64_t id = actor->getRuntimeID();
         auto it = expanded.find(id);
         const bool touched = it != expanded.end();
-        const bool wanted = expand && isSelected(actor->getEntityTypeID());
+        const bool wanted = expand && isSelected(actor);
         if (!wanted && !touched) continue;
 
         auto* shape = actor->aabbShape;
