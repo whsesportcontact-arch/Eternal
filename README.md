@@ -38,7 +38,8 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
   and Enta picks that file for you (no file dialog). This is Bedrock's own custom-skin import, so other players
   see it too. Classic, slim, old 64x32 and HD skins all work.
 - **Mods list:** switch modules on/off before starting the game. Your choices apply when Enta loads.
-- **Auto-updates:** the launcher checks GitHub on start and updates itself and Enta.dll.
+- **One download:** Enta.dll is packed inside EntaLauncher.exe, so the launcher is the only file you need.
+- **Auto-updates:** the launcher checks GitHub on start and updates itself, which brings the new Enta.dll with it.
   - **Stable** gets builds from `main`.
   - **Test builds** (switch in the bottom left) gets builds from any other branch, so you can try changes before
     merging them.

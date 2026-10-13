@@ -4,3 +4,6 @@
 #define ENTA_BUILD_ID L"@ENTA_BUILD_ID@"
 // release tag this launcher came from ("latest" or "dev"): its default channel
 #define ENTA_CHANNEL L"@ENTA_CHANNEL@"
+// 1 when Enta.dll is packed inside this launcher (resource ENTA_DLL_RESOURCE)
+#define ENTA_HAS_EMBEDDED_DLL @ENTA_HAS_EMBEDDED_DLL@
+#define ENTA_DLL_RESOURCE 201

@@ -390,6 +390,33 @@ std::string pendingVersion() {
     return gPendingVersion;
 }
 
+// Write the Enta.dll packed inside this launcher, if this build has one and it isn't installed yet.
+// Returns true when the packed DLL is installed (or waiting for Minecraft to close so it can be).
+bool installEmbeddedDll() {
+#if ENTA_HAS_EMBEDDED_DLL
+    const std::string myBuild = narrow(ENTA_BUILD_ID);
+    if (fileExists(dllPath()) && !myBuild.empty() && installedDllVersion() == myBuild) return true;
+
+    HMODULE self = GetModuleHandleW(nullptr);
+    HRSRC res = FindResourceW(self, MAKEINTRESOURCEW(ENTA_DLL_RESOURCE), RT_RCDATA);
+    if (!res) return false;
+    HGLOBAL loaded = LoadResource(self, res);
+    const DWORD size = SizeofResource(self, res);
+    const void* data = loaded ? LockResource(loaded) : nullptr;
+    if (!data || size == 0) return false;
+
+    if (!writeFile(pendingDllPath(), std::string(static_cast<const char*>(data), size))) return false;
+    if (installPendingDll(myBuild)) {
+        setPendingVersion("");
+    } else {
+        setPendingVersion(myBuild); // Minecraft has the old one loaded: swapped in when you next launch
+    }
+    return true;
+#else
+    return false;
+#endif
+}
+
 // Replace this exe with the newest one and restart. Returns false if it couldn't.
 bool selfUpdate() {
     const std::wstring self = exePath();
@@ -439,6 +466,12 @@ void updateWorker() {
     if (!download(releaseUrl(L"version.txt"), versionFile) || !readFile(versionFile, remote) ||
         (remote = trim(remote)).empty()) {
         DeleteFileW(versionFile.c_str());
+        // offline or no version.txt: the DLL packed inside this launcher still works
+        if (installEmbeddedDll()) {
+            setUpdateText(L"Couldn't check for updates. Using the Enta packed in this launcher.", true);
+            gUpdating = false;
+            return;
+        }
         // older releases have no version.txt: still grab the newest Enta.dll like the old launcher did
         if (download(releaseUrl(kDllName), pendingDllPath())) {
             if (installPendingDll(""))
@@ -461,8 +494,14 @@ void updateWorker() {
         setUpdateText(L"Couldn't update the launcher. Is its folder read-only?", true);
     }
 
-    // 2. Enta.dll
-    if (installedDllVersion() != remote || !fileExists(dllPath())) {
+    // 2. Enta.dll: a launcher that's up to date carries the matching DLL inside it, nothing to download
+    if (remote == myBuild && installEmbeddedDll()) {
+        if (!pendingVersion().empty()) {
+            setUpdateText(L"Enta update ready. Close Minecraft fully to use it.", true);
+            gUpdating = false;
+            return;
+        }
+    } else if (installedDllVersion() != remote || !fileExists(dllPath())) {
         setUpdateText(L"Downloading the newest Enta...");
         if (download(releaseUrl(kDllName), pendingDllPath())) {
             if (installPendingDll(remote)) {

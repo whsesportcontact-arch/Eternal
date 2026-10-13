@@ -75,7 +75,8 @@ jobs:
             -DCMAKE_CXX_COMPILER=cl.exe `
             -DENTA_REPO="${{ github.repository }}" `
             -DENTA_BUILD_ID="${{ steps.ts.outputs.timestamp }}" `
-            -DENTA_CHANNEL="${{ steps.ch.outputs.tag }}"
+            -DENTA_CHANNEL="${{ steps.ch.outputs.tag }}" `
+            -DENTA_EMBED_DLL="${{ github.workspace }}/build/Enta.dll"
           cmake --build launcher-build 2>&1 | Tee-Object -FilePath launcher-log.txt
           if ($LASTEXITCODE -ne 0) {
             $errs = Select-String -Path launcher-log.txt -CaseSensitive -Pattern ': (fatal )?error [A-Z]+[0-9]+|FAILED:|CMake Error' | Select-Object -First 60 | ForEach-Object { $_.Line.Trim() }
@@ -118,8 +119,9 @@ jobs:
           prerelease: ${{ steps.ch.outputs.prerelease }}
           make_latest: ${{ steps.ch.outputs.make_latest }}
           body: |
-            Download **EntaLauncher.exe** and run it. It keeps itself and Enta.dll up to date,
-            starts Minecraft and loads Enta. Press **M** in game to open the menu.
+            **Just download EntaLauncher.exe** and run it. Enta.dll is packed inside it, so that's the only file
+            you need. It keeps itself up to date, starts Minecraft and loads Enta. Press **M** in game to open the menu.
+            (Enta.dll and Eternal.dll below are only for older launchers.)
             Turn on **Test builds** in the launcher to get this channel: `${{ steps.ch.outputs.tag }}`.
 
             Built ${{ steps.ts.outputs.timestamp }} from `${{ github.ref_name }}` (${{ github.sha }})
