@@ -74,7 +74,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_CXX_COMPILER=cl.exe `
             -DENTA_REPO="${{ github.repository }}" `
-            -DENTA_BUILD_ID="${{ steps.ts.outputs.timestamp }}"
+            -DENTA_BUILD_ID="${{ steps.ts.outputs.timestamp }}" `
+            -DENTA_CHANNEL="${{ steps.ch.outputs.tag }}"
           cmake --build launcher-build 2>&1 | Tee-Object -FilePath launcher-log.txt
           if ($LASTEXITCODE -ne 0) {
             $errs = Select-String -Path launcher-log.txt -CaseSensitive -Pattern ': (fatal )?error [A-Z]+[0-9]+|FAILED:|CMake Error' | Select-Object -First 60 | ForEach-Object { $_.Line.Trim() }

@@ -2,3 +2,5 @@
 // filled in by CMake (the GitHub workflow passes these); empty for local builds = no auto-updates
 #define ENTA_REPO L"@ENTA_REPO@"
 #define ENTA_BUILD_ID L"@ENTA_BUILD_ID@"
+// release tag this launcher came from ("latest" or "dev"): its default channel
+#define ENTA_CHANNEL L"@ENTA_CHANNEL@"

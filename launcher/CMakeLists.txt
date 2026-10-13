@@ -5,6 +5,7 @@ project(EntaLauncher CXX RC)
 # repo's releases ("latest" = stable, "dev" = test builds). ENTA_BUILD_ID is compared with version.txt.
 set(ENTA_REPO "" CACHE STRING "GitHub repo to download updates from (owner/name)")
 set(ENTA_BUILD_ID "" CACHE STRING "Build id of this launcher (matches version.txt in its release)")
+set(ENTA_CHANNEL "latest" CACHE STRING "Release tag this launcher is published in (latest or dev)")
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 add_executable(EntaLauncher WIN32 main.cpp launcher.rc)

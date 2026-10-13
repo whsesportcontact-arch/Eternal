@@ -33,6 +33,9 @@
 #ifndef ENTA_BUILD_ID
 #define ENTA_BUILD_ID L""
 #endif
+#ifndef ENTA_CHANNEL
+#define ENTA_CHANNEL L"latest"
+#endif
 
 namespace {
 
@@ -213,6 +216,8 @@ bool sameTime(FILETIME a, FILETIME b) { return a.dwLowDateTime == b.dwLowDateTim
 std::wstring settingsPath() { return dataDir() + L"\\launcher.ini"; }
 
 void loadSettings() {
+    // first run: use the channel this launcher was downloaded from
+    gDevChannel = std::wstring(ENTA_CHANNEL) == L"dev";
     std::string text;
     if (!readFile(settingsPath(), text)) return;
     std::istringstream ss(text);
@@ -414,7 +419,16 @@ void updateWorker() {
     if (!download(releaseUrl(L"version.txt"), versionFile) || !readFile(versionFile, remote) ||
         (remote = trim(remote)).empty()) {
         DeleteFileW(versionFile.c_str());
-        setUpdateText(gDevChannel ? L"No test build published yet." : L"Couldn't check for updates (offline?).", true);
+        // older releases have no version.txt: still grab the newest Enta.dll like the old launcher did
+        if (download(releaseUrl(kDllName), pendingDllPath())) {
+            if (installPendingDll(""))
+                setUpdateText(L"Enta downloaded (" + channelName + L"). Version info will show after the next build.");
+            else
+                setUpdateText(L"Enta update downloaded. Close Minecraft fully to use it.", true);
+        } else {
+            setUpdateText(gDevChannel ? L"No test build published yet." : L"Couldn't check for updates (offline?).",
+                          true);
+        }
         gUpdating = false;
         return;
     }
