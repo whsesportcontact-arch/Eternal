@@ -10,8 +10,13 @@
 #include "mc/common/client/game/GameCore.h"
 #include "mc/common/client/game/Platform_GameCore.h"
 #include "util/Logger.h"
+#include "client/feature/module/modules/eternal/LauncherBridge.h"
+#include "client/misc/Notifications.h"
 
 namespace {
+    std::shared_ptr<Hook> pickImageHook;
+    bool useLegacyPicker = false; // Windows 10: the game's own picker crashes
+
     bool isWindows10() noexcept {
         using RtlGetVersion = LONG(WINAPI*)(OSVERSIONINFOW*);
 
@@ -75,21 +80,37 @@ void CustomSkinPickerHooks::showLegacyPicker(HWND owner, std::shared_ptr<SDK::Im
     queueCancelled(std::move(callback));
 }
 
-void __fastcall CustomSkinPickerHooks::pickImage(void*, std::shared_ptr<SDK::ImagePickingCallback> callback) {
+void __fastcall CustomSkinPickerHooks::pickImage(void* appPlatform, std::shared_ptr<SDK::ImagePickingCallback> callback) {
     if (!callback) return;
 
-    // Minecraft's Windows App SDK picker crashes before it can report failure on Windows 10.
-    // Bypass it completely instead of relying on a C++ exception handler for an access violation.
-    showLegacyPicker(getMinecraftWindow(), std::move(callback));
+    // Enta Launcher: you picked a skin there, so answer "Choose New Skin" with it, no file dialog.
+    if (auto launcherSkin = LauncherBridge::takePendingSkin()) {
+        Logger::Info("Using the skin chosen in Enta Launcher");
+        Latite::getNotifications().push(L"Using your skin from the Enta Launcher");
+        queueSelected(std::move(callback), std::move(*launcherSkin));
+        return;
+    }
+
+    if (useLegacyPicker) {
+        // Minecraft's Windows App SDK picker crashes before it can report failure on Windows 10.
+        // Bypass it completely instead of relying on a C++ exception handler for an access violation.
+        showLegacyPicker(getMinecraftWindow(), std::move(callback));
+        return;
+    }
+
+    // Windows 11: the game's normal picker
+    pickImageHook->oFunc<decltype(&pickImage)>()(appPlatform, std::move(callback));
 }
 
 CustomSkinPickerHooks::CustomSkinPickerHooks()
-    : HookGroup("Windows 10 custom-skin picker workaround") {
-    if (!isWindows10() || !Latite::supportsMinecraftVersion(Latite::get().gameVersion) ||
+    : HookGroup("Custom skin picker (Windows 10 fix + Enta Launcher skins)") {
+    if (!Latite::supportsMinecraftVersion(Latite::get().gameVersion) ||
         !Signatures::AppPlatform_GameCorePC_pickImage.result) {
         return;
     }
 
-    (void)addHook(Signatures::AppPlatform_GameCorePC_pickImage.result, pickImage, "AppPlatform_GameCorePC::pickImage");
-    Logger::Info("Installed Windows 10 custom-skin picker workaround.");
+    useLegacyPicker = isWindows10();
+    pickImageHook =
+        addHook(Signatures::AppPlatform_GameCorePC_pickImage.result, pickImage, "AppPlatform_GameCorePC::pickImage");
+    Logger::Info("Installed custom-skin picker hook (Windows 10 fix: {}).", useLegacyPicker);
 }

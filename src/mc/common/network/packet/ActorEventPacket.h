@@ -12,8 +12,9 @@ namespace SDK {
         USE_ITEM = 9,
         EAT_BLOCK_ANIMATION = 10,
         FISH_HOOK_BUBBLE = 11,
-        FISH_HOOK_POSITION = 12
+        FISH_HOOK_POSITION = 12,
         // .. and more i didnt bother adding
+        TALISMAN_ACTIVATE = 65 // totem of undying pop
     };
 
     class ActorEventPacket : public Packet {

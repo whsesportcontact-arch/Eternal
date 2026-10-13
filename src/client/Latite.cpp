@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+#include "client/feature/module/modules/eternal/LauncherBridge.h"
 // LatiteRecode.cpp : Defines the entry point for the application.
 //
 #include <cstdint>
@@ -602,6 +603,7 @@ void Latite::threadsafeInit() {
     Logger::Info("Loaded startup scripts");
 
     Latite::getConfigManager().applyModuleConfig();
+    LauncherBridge::onConfigApplied(); // mods switched on/off in the launcher
 
     Latite::getRenderer().setShouldInit();
 
@@ -693,8 +695,11 @@ void Latite::initSettings() {
     }
     {
         auto set =
-            std::make_shared<Setting>("menuBlurEnabled", LocalizeString::get("client.settings.menuBlurEnabled.name"),
-                                      LocalizeString::get("client.settings.menuBlurEnabled.desc"));
+            // new key so an old saved "on" doesn't carry over
+            std::make_shared<Setting>("liveMenuBlur", LocalizedString("enta.settings.liveMenuBlur.name", L"Live Background Blur"),
+                                      LocalizedString("enta.settings.liveMenuBlur.desc",
+                                                      L"Blurs the game behind menus. It can flicker on some PCs; leave "
+                                                      L"it off if flashing bothers you."));
         set->value = &this->menuBlurEnabled;
         this->getSettings().addSetting(set);
     }

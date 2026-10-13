@@ -320,6 +320,7 @@ void HUDEditor::renderModules(SDK::MinecraftUIRenderContext* ctx, bool forceMine
 }
 
 void HUDEditor::renderModule(HUDModule* mod, SDK::MinecraftUIRenderContext* ctx) {
+    ModuleProfiler::Scope timed { static_cast<Listener*>(mod) };
     auto& cursorPos = SDK::ClientInstance::get()->cursorPos;
     bool hovering = shouldSelect(mod->getRect(), cursorPos);
 

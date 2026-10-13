@@ -8,9 +8,40 @@ GNU GPL v3 (see `LICENSE`). If you share Enta with anyone, you must also share i
 ## What Enta changes
 - **Branding:** "Enta Client" everywhere, new logo, `Enta.dll` output, settings stored in `%APPDATA%\Enta`
 - **Theme:** near-black menu with a purple accent (#8B3DFF), purple outlines, scrollbar, snap lines and tooltips
-- **New modules:** Watermark, Module List (ArrayList), Session Timer, Memory Usage, Health Display
-- All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Motion Blur, Toggle Sprint, Minimap...)
+- **New modules:** Watermark, Module List (ArrayList), Session Timer, Memory Usage, Health Display,
+  Totem Pop Counter, Enta Pack
+- **Totem Pop Counter:** shows `-1`, `-2`, ... next to a player's nametag every time they pop a totem, with
+  optional chat alerts. Resets when they die or you leave.
+- **Enta Pack:** builds a resource pack from your own game files with Low Fire (screen fire and ground fire,
+  set separately; ground fire defaults to slab height), Low Shield,
+  Small Totem Pop, and fewer combat/ambient particles for FPS. Turn on "Enta Pack" once in
+  Settings > Global Resources > My Packs; after that, changing a setting rebuilds it (rejoin to apply).
+- **Performance Mode:** one switch (bind it to a key) that turns off the heaviest modules, and optionally your HUD,
+  then turns exactly those back on when you switch it off.
+- **Lag Check:** HUD readout with FPS, ping and whether the server/Realm has stopped responding, plus a
+  "Lag:" line saying if it's your PC, your connection, or the server. "Show Module Costs" lists which Enta
+  modules use the most time per frame.
+- **Mob Hitbox Expand (Singleplayer, experimental):** makes the mobs you pick (Wither Skeleton by default) easier
+  to hit over blocks, for farms in your own world. Turns itself off with a chat message on Realms, servers, and any
+  world with other players, and puts every hitbox back to normal. **Add-on Mobs** and **Player-Type NPCs** cover
+  custom mobs from add-ons (like a skygen world); real players are never affected.
+- **Menus:** a steady dark backdrop instead of the live blur, which could flicker. The blur is opt-in in Settings.
+- **Removed:** Motion Blur.
+- All 50+ Latite modules (Zoom, Freelook, Keystrokes, CPS, FPS, Armor HUD, Toggle Sprint, Minimap...)
   and the JavaScript plugin system are still included
+
+## Enta Launcher
+- **Skins:** a spinning 3D preview (drag to turn it) of your in-game skin and any skins you add.
+  Pick one and press **Use in game**; then in Minecraft open Dressing Room > Classic Skins > **Choose New Skin**,
+  and Enta picks that file for you (no file dialog). This is Bedrock's own custom-skin import, so other players
+  see it too. Classic, slim, old 64x32 and HD skins all work.
+- **Mods list:** switch modules on/off before starting the game. Your choices apply when Enta loads.
+- **Auto-updates:** the launcher checks GitHub on start and updates itself and Enta.dll.
+  - **Stable** gets builds from `main`.
+  - **Test builds** (switch in the bottom left) gets builds from any other branch, so you can try changes before
+    merging them.
+- Already have an old EntaLauncher.exe? Download the new one once from the Releases page; after that it
+  updates itself.
 
 ## Build (Windows)
 Requirements: Visual Studio 2026 (or Build Tools) with "Desktop development with C++" (MSVC x64, Windows SDK,

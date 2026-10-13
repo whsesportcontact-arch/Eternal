@@ -1,10 +1,18 @@
 name: Build Enta
 
-# Builds Enta.dll + EntaLauncher.exe on every push and publishes them as the "latest" release.
+# Builds Enta.dll + EntaLauncher.exe on every push.
+#   push to main         -> "latest" release (stable channel)
+#   push to other branch -> "dev" pre-release (the launcher's "Test builds" switch)
+# The launcher reads version.txt from its channel's release and updates itself + Enta.dll when it changes.
 on:
   push:
-    branches: ["main"]
+    branches: ["**"]
   workflow_dispatch:
+
+# one release update per channel at a time
+concurrency:
+  group: release-${{ github.ref_name == 'main' && 'latest' || 'dev' }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -29,6 +37,22 @@ jobs:
         shell: bash
         run: echo "timestamp=$(date -u +"%Y-%m-%d_%H-%M-%SZ")" >> "$GITHUB_OUTPUT"
 
+      - name: Pick release channel
+        id: ch
+        shell: bash
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "make_latest=true" >> "$GITHUB_OUTPUT"
+            echo "title=Enta Client (latest build)" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=dev" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "make_latest=false" >> "$GITHUB_OUTPUT"
+            echo "title=Enta Client (test build from ${GITHUB_REF_NAME})" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build Enta.dll
         run: |
           cmake -B build -G Ninja `
@@ -49,7 +73,9 @@ jobs:
           cmake -S launcher -B launcher-build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_CXX_COMPILER=cl.exe `
-            -DENTA_DLL_URL="https://github.com/${{ github.repository }}/releases/latest/download/Enta.dll"
+            -DENTA_REPO="${{ github.repository }}" `
+            -DENTA_BUILD_ID="${{ steps.ts.outputs.timestamp }}" `
+            -DENTA_CHANNEL="${{ steps.ch.outputs.tag }}"
           cmake --build launcher-build 2>&1 | Tee-Object -FilePath launcher-log.txt
           if ($LASTEXITCODE -ne 0) {
             $errs = Select-String -Path launcher-log.txt -CaseSensitive -Pattern ': (fatal )?error [A-Z]+[0-9]+|FAILED:|CMake Error' | Select-Object -First 60 | ForEach-Object { $_.Line.Trim() }
@@ -61,6 +87,10 @@ jobs:
       - name: Copy for old launchers
         shell: bash
         run: cp build/Enta.dll build/Eternal.dll  # EternalLauncher.exe still downloads this name
+
+      - name: Version file
+        shell: bash
+        run: echo "${{ steps.ts.outputs.timestamp }}" > build/version.txt
 
       - name: Upload build (kept 90 days)
         uses: actions/upload-artifact@v4
@@ -76,21 +106,25 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release delete latest -y --cleanup-tag || true
+        run: gh release delete "${{ steps.ch.outputs.tag }}" -y --cleanup-tag || true
 
       - name: Publish release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2.3.2
         with:
-          tag_name: latest
-          name: Enta Client (latest build)
+          tag_name: ${{ steps.ch.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.ch.outputs.title }}
+          prerelease: ${{ steps.ch.outputs.prerelease }}
+          make_latest: ${{ steps.ch.outputs.make_latest }}
           body: |
-            Download **EntaLauncher.exe** and run it. It grabs the newest Enta.dll automatically,
+            Download **EntaLauncher.exe** and run it. It keeps itself and Enta.dll up to date,
             starts Minecraft and loads Enta. Press **M** in game to open the menu.
+            Turn on **Test builds** in the launcher to get this channel: `${{ steps.ch.outputs.tag }}`.
 
-            Built ${{ steps.ts.outputs.timestamp }}
-          make_latest: true
+            Built ${{ steps.ts.outputs.timestamp }} from `${{ github.ref_name }}` (${{ github.sha }})
           files: |
             build/Enta.dll
             build/Eternal.dll
+            build/version.txt
             launcher-build/EntaLauncher.exe
